@@ -1,5 +1,4 @@
 import os
-import sys
 from src.utils import read_nifti, plot_nifti
 
 if __name__ == '__main__':
