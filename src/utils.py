@@ -15,6 +15,14 @@ def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def plot_matrix(matrix, cmap='gray'):
+def plot_matrix(matrix, slice=75, cmap='gray', axis="z"):
+    matrix = matrix.real
+    if axis == 0:
+        matrix = matrix[slice, :, :]
+    elif axis == 1:
+        matrix = matrix[:, slice, :]
+    elif axis == 2:
+        matrix = matrix[:, :, slice]
+        
     plt.imshow(matrix, cmap=cmap)
     plt.show()
