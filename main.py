@@ -1,5 +1,6 @@
 import os
-from src.utils import read_nifti, plot_nifti
+from src.utils import read_nifti, plot_matrix
+from src.undersampling_sim import convert_to_kspace
 
 if __name__ == '__main__':
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -8,4 +9,6 @@ if __name__ == '__main__':
 
     nifti = read_nifti(data_path)
     nifti_slice = nifti[:, :, 50]
-    plot_nifti(nifti_slice)
+    plot_matrix(nifti_slice)
+    print(type(nifti_slice))
+    plot_matrix(convert_to_kspace(nifti_slice))

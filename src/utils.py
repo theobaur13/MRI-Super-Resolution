@@ -5,6 +5,6 @@ def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def plot_nifti(matrix):
+def plot_matrix(matrix):
     plt.imshow(matrix, cmap='gray')
     plt.show()
