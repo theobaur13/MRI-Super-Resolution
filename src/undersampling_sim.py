@@ -27,11 +27,11 @@ def random_undersampling(kspace, factor=1.2):
 
 def cartesian_undersampling(kspace, axis, factor=3):
     # Create a mask that keeps every x-th line along the specified axis
-    mask = np.zeros(kspace.shape)
+    mask = np.ones(kspace.shape)
     slices = [slice(None)] * 3
-    slices[axis] = slice(None, None, factor)  # Slice every x-th line
+    slices[(axis + 1) % 3] = slice(None, None, factor)  # Slice every x-th line
     
-    mask[tuple(slices)] = 1
+    mask[tuple(slices)] = 0
     return kspace * mask
 
 def radial_undersampling(kspace, axis, radius=50):
