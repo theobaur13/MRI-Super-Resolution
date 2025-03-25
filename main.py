@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-from src.utils import read_nifti, plot_matrix, get_paths
+from src.utils import read_nifti, get_paths, display
 from src.undersampling_sim import convert_to_kspace, convert_to_image, undersampling
 
 if __name__ == "__main__":
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     
     undersampling_method = "radial"
     undersampling_factor = 4
-    axis = 0
+    axis = 2
     
     for path in tqdm(train_paths + validate_paths):
         image = read_nifti(path)
@@ -41,8 +41,4 @@ if __name__ == "__main__":
             validate_simulated_kspace.append(simulated_kspace)
             validate_simulated_images.append(simulated_image)
 
-
-    plot_matrix(train_images[0], axis=axis)
-    plot_matrix(train_kspace[0], axis=axis)
-    plot_matrix(train_simulated_kspace[0], axis=axis)
-    plot_matrix(train_simulated_images[0], axis=axis)
+    display(train_images[0], train_kspace[0], train_simulated_kspace[0], train_simulated_images[0], axis=axis)

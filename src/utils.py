@@ -15,7 +15,7 @@ def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def plot_matrix(matrix, slice=75, cmap='gray', axis="z"):
+def plot_matrix(ax, matrix, slice=75, cmap='gray', axis="z"):
     matrix = matrix.real
     if axis == 0:
         matrix = matrix[slice, :, :]
@@ -24,5 +24,23 @@ def plot_matrix(matrix, slice=75, cmap='gray', axis="z"):
     elif axis == 2:
         matrix = matrix[:, :, slice]
         
-    plt.imshow(matrix, cmap=cmap)
+    ax.imshow(matrix, cmap=cmap)
+    ax.axis('off')
+
+def display(image, kspace, simulated_kspace, simulated_image, axis=0):
+    fig, axes = plt.subplots(2, 2, figsize=(6, 6))
+    
+    plot_matrix(axes[0, 0], image, axis=axis)
+    axes[0, 0].set_title('Original Image')
+    
+    plot_matrix(axes[0, 1], kspace, axis=axis)
+    axes[0, 1].set_title('Original k-space')
+    
+    plot_matrix(axes[1, 1], simulated_kspace, axis=axis)
+    axes[1, 1].set_title('Simulated k-space')
+    
+    plot_matrix(axes[1, 0], simulated_image, axis=axis)
+    axes[1, 0].set_title('Simulated Image')
+    
+    plt.tight_layout()
     plt.show()
