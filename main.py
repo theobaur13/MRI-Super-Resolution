@@ -20,9 +20,9 @@ if __name__ == "__main__":
     validate_simulated_kspace = []
     validate_simulated_images = []
     
-    undersampling_method = "radial"
-    undersampling_factor = 4
-    axis = 2
+    undersampling_method = "random"
+    undersampling_factor = 1.2
+    axis = 0
     
     for path in tqdm(train_paths + validate_paths):
         image = read_nifti(path)
@@ -41,4 +41,4 @@ if __name__ == "__main__":
             validate_simulated_kspace.append(simulated_kspace)
             validate_simulated_images.append(simulated_image)
 
-    display(train_images[0], train_kspace[0], train_simulated_kspace[0], train_simulated_images[0], axis=axis)
+    display(train_images[0], train_kspace[0], train_simulated_kspace[0], train_simulated_images[0], axis=axis, highlight=True)
