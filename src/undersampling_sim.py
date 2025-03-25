@@ -37,28 +37,16 @@ def radial_undersampling(kspace, axis, radius=50):
     mask = np.zeros(kspace.shape)
     center = np.array(kspace.shape) // 2
 
-    if axis == 0:
-        # Iterate over the z-axis (depth)
-        for z in range(kspace.shape[0]):
-            # Create a radial mask in the XY-plane for each slice
-            Y, X = np.indices(kspace.shape[1:])  # Height and Width (perpendicular to z-axis)
-            dist = np.sqrt((X - center[1])**2 + (Y - center[0])**2)  # Distance from center in XY-plane
-            mask[z, dist <= radius] = 1  # Apply the radial mask
+    Z, Y, X = np.indices(kspace.shape)
 
-    elif axis == 1:
-        # Iterate over the y-axis (height)
-        for y in range(kspace.shape[1]):
-            # Create a radial mask in the XZ-plane for each slice
-            Z, X = np.indices(kspace.shape[[0, 2]])  # Depth and Width (perpendicular to y-axis)
-            dist = np.sqrt((X - center[2])**2 + (Z - center[0])**2)  # Distance from center in XZ-plane
-            mask[:, y, dist <= radius] = 1  # Apply the radial mask
+    if axis == 0:       # Cylinder along the z-axis
+        mask = np.where(np.sqrt((X - center[2])**2 + (Y - center[1])**2) <= radius, 1, 0)
 
-    elif axis == 2:
-        # Iterate over the x-axis (width)
-        for x in range(kspace.shape[2]):
-            # Create a radial mask in the YZ-plane for each slice
-            Y, Z = np.indices(kspace.shape[[1, 0]])  # Height and Depth (perpendicular to x-axis)
-            dist = np.sqrt((Y - center[1])**2 + (Z - center[0])**2)  # Distance from center in YZ-plane
-            mask[:, :, x] = (dist <= radius).astype(float)  # Apply the radial mask
+    elif axis == 1:     # Cylinder along the y-axis
+        mask = np.where(np.sqrt((X - center[2])**2 + (Z - center[0])**2) <= radius, 1, 0)
 
+    elif axis == 2:     # Cylinder along the x-axis
+        mask = np.where(np.sqrt((Y - center[1])**2 + (Z - center[0])**2) <= radius, 1, 0)
+
+            
     return kspace * mask
