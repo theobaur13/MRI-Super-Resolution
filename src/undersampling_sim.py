@@ -49,7 +49,7 @@ def radial_undersampling(kspace, axis, radius=50):
     
     return kspace * mask
 
-def variable_density_undersampling(kspace, factor=1.2):
+def variable_density_undersampling(kspace, factor=1.1, ks=30):
     # Chance of sampling a line is inversely proportional to its distance from the center
     center = np.array(kspace.shape) // 2
     Z, Y, X = np.indices(kspace.shape)
@@ -59,7 +59,6 @@ def variable_density_undersampling(kspace, factor=1.2):
     distances = distances / np.max(distances)
 
     # Sigmoid function
-    ks = 10
     distances = 1 / (1 + np.exp(-ks * (distances - 0.5)))
 
     # Flatten

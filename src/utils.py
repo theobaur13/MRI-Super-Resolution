@@ -2,8 +2,9 @@ import os
 import nibabel as nib
 import matplotlib.pyplot as plt
 import numpy as np
+import SimpleITK as sitk
 
-def get_paths(data_dir, seq, dataset):
+def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")
     validate_dir = os.path.join(data_dir, dataset, "validate")
 
@@ -12,11 +13,29 @@ def get_paths(data_dir, seq, dataset):
 
     return train_paths, validate_paths
 
+def get_picai_paths(data_dir, fold, seq, limit=10):
+    dir = os.path.join(data_dir, "images", f"fold{fold}")
+
+    paths = []
+    print(dir)
+    for patient in os.listdir(dir):
+        patient_dir = os.path.join(dir, patient)
+        for file in os.listdir(patient_dir):
+            if file.endswith(f"{seq}.mha"):
+                paths.append(os.path.join(patient_dir, file))
+                if len(paths) == limit:
+                    break
+    return paths
+
 def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def plot_matrix(ax, matrix, slice=75, cmap='gray', axis="z"):
+def read_metaimage(file_path):
+    img = sitk.ReadImage(file_path)
+    return sitk.GetArrayFromImage(img)
+
+def plot_matrix(ax, matrix, slice=10, cmap='gray', axis="z"):
     # set NaN values to red on colormap
     cmap = plt.cm.gray
     cmap.set_bad(color='red')
