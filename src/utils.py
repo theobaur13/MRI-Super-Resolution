@@ -52,21 +52,26 @@ def plot_matrix(ax, matrix, slice=10, cmap='gray', axis="z"):
     ax.axis('off')
 
 def display(image, kspace, simulated_kspace, simulated_image, axis=0, highlight=False):
-    fig, axes = plt.subplots(2, 2, figsize=(6, 6))
+    fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
     
-    plot_matrix(axes[0, 0], image, axis=axis)
-    axes[0, 0].set_title('Original Image')
+    plot_matrix(axes_images[0], image, axis=axis)
+    axes_images[0].set_title('Original Image')
     
-    plot_matrix(axes[0, 1], kspace, axis=axis)
-    axes[0, 1].set_title('Original k-space')
+    plot_matrix(axes_images[1], simulated_image, axis=axis)
+    axes_images[1].set_title('Simulated Image')
+
+    plt.tight_layout()
+    plt.show(block=False)  
+
+    fig_kspace, axes_kspace = plt.subplots(1, 2, figsize=(9, 4))
+
+    plot_matrix(axes_kspace[0], kspace, axis=axis)
+    axes_kspace[0].set_title('Original k-space')
     
     if highlight:
         simulated_kspace[simulated_kspace == 0] = np.nan
-    plot_matrix(axes[1, 1], simulated_kspace, axis=axis)
-    axes[1, 1].set_title('Simulated k-space')
-    
-    plot_matrix(axes[1, 0], simulated_image, axis=axis)
-    axes[1, 0].set_title('Simulated Image')
+    plot_matrix(axes_kspace[1], simulated_kspace, axis=axis)
+    axes_kspace[1].set_title('Simulated k-space')
     
     plt.tight_layout()
     plt.show()

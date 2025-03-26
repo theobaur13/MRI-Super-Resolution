@@ -29,7 +29,7 @@ if __name__ == "__main__":
     simulated_images = []
     
     undersampling_method = "radial"       # random, cartesian, radial, variable_density
-    undersampling_factor = 30
+    undersampling_factor = 80
     axis = 0                                        # 0: side view, 1: front view, 2: top view
     
     for path in tqdm(paths):
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             image = read_nifti(path)
         elif dataset_type == "prostate":
             image = read_metaimage(path)
-            print(image.shape)
+
         kspace = convert_to_kspace(image)
         simulated_kspace = undersampling(kspace, method=undersampling_method, axis=axis, factor=undersampling_factor)
         simulated_image = convert_to_image(simulated_kspace)
