@@ -17,14 +17,13 @@ def get_picai_paths(data_dir, fold, seq, limit=10):
     dir = os.path.join(data_dir, "images", f"fold{fold}")
 
     paths = []
-    print(dir)
     for patient in os.listdir(dir):
         patient_dir = os.path.join(dir, patient)
         for file in os.listdir(patient_dir):
             if file.endswith(f"{seq}.mha"):
                 paths.append(os.path.join(patient_dir, file))
                 if len(paths) == limit:
-                    break
+                    return paths
     return paths
 
 def read_nifti(file_path):

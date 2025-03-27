@@ -11,16 +11,6 @@ def convert_to_image(kspace):
     image *= np.sqrt(np.prod(np.take(image.shape, [0, 1, 2])))
     return image
 
-def undersampling(kspace, axis, factor, method="random"):
-    if method == "random":
-        return random_undersampling(kspace, factor)
-    elif method == "cartesian":
-        return cartesian_undersampling(kspace, axis, factor)
-    elif method == "radial":
-        return radial_undersampling(kspace, axis, factor)
-    elif method == "variable_density":
-        return variable_density_undersampling(kspace, factor)
-
 def random_undersampling(kspace, factor=1.2):
     mask = np.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
     return kspace * mask
@@ -34,7 +24,7 @@ def cartesian_undersampling(kspace, axis, factor=3):
     mask[tuple(slices)] = 0
     return kspace * mask
 
-def radial_undersampling(kspace, axis, radius=50):
+def radial_undersampling(kspace, axis, radius=70):
     # Create a mask that keeps only the center of the k-space, where the axis is the axis of slicing
     mask = np.zeros(kspace.shape)
     center = np.array(kspace.shape) // 2

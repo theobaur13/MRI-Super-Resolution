@@ -1,7 +1,7 @@
 import os
 from tqdm import tqdm
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display
-from src.undersampling_sim import convert_to_kspace, convert_to_image, undersampling
+from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling
 
 if __name__ == "__main__":
     dataset_type = "prostate"                      # brain, prostate
@@ -18,7 +18,7 @@ if __name__ == "__main__":
         seq = "sag"                                 # adc, cor, hbv, sag, t2w
         fold = 0
 
-        data_path = os.path.join(data_path, "data-picai")
+        data_path = os.path.join(data_path, "data-picai-main")
         paths = get_picai_paths(data_path, fold, seq)
 
     paths_set = set(paths)
@@ -28,18 +28,19 @@ if __name__ == "__main__":
     simulated_kspaces = []
     simulated_images = []
     
-    undersampling_method = "radial"       # random, cartesian, radial, variable_density
-    undersampling_factor = 80
-    axis = 0                                        # 0: side view, 1: front view, 2: top view
+    axis = 0                                                # 0: side view, 1: front view, 2: top view
     
     for path in tqdm(paths):
         if dataset_type == "brain":
             image = read_nifti(path)
         elif dataset_type == "prostate":
             image = read_metaimage(path)
-
+        
         kspace = convert_to_kspace(image)
-        simulated_kspace = undersampling(kspace, method=undersampling_method, axis=axis, factor=undersampling_factor)
+        simulated_kspace = radial_undersampling(kspace, axis=axis, radius=70)
+        # simulated_kspace = variable_density_undersampling(kspace, factor=1.1, ks=30)
+        # simulated_kspace = random_undersampling(kspace, factor=1.2)
+        # simulated_kspace = cartesian_undersampling(kspace, axis=axis, factor=3)
         simulated_image = convert_to_image(simulated_kspace)
 
         if path in paths_set:
@@ -48,4 +49,11 @@ if __name__ == "__main__":
             simulated_kspaces.append(simulated_kspace)
             simulated_images.append(simulated_image)
 
-    display(real_images[0], real_kspaces[0], simulated_kspaces[0], simulated_images[0], axis=axis, highlight=True)
+    index = 6
+    display(real_images[index],
+            real_kspaces[index],
+            simulated_kspaces[index],
+            simulated_images[index],
+            axis=axis,
+            highlight=True
+    )
