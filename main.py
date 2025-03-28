@@ -2,6 +2,7 @@ import os
 from tqdm import tqdm
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display
 from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling
+from src.evaluation import psnr
 
 if __name__ == "__main__":
     dataset_type = "prostate"                      # brain, prostate
@@ -37,7 +38,7 @@ if __name__ == "__main__":
             image = read_metaimage(path)
         
         kspace = convert_to_kspace(image)
-        simulated_kspace = radial_undersampling(kspace, axis=axis, radius=70)
+        simulated_kspace = radial_undersampling(kspace, axis=axis, radius=80)
         # simulated_kspace = variable_density_undersampling(kspace, factor=1.1, ks=30)
         # simulated_kspace = random_undersampling(kspace, factor=1.2)
         # simulated_kspace = cartesian_undersampling(kspace, axis=axis, factor=3)
@@ -50,6 +51,7 @@ if __name__ == "__main__":
             simulated_images.append(simulated_image)
 
     index = 6
+    print("PSNR: ", psnr(real_images[index], simulated_images[index]))
     display(real_images[index],
             real_kspaces[index],
             simulated_kspaces[index],
