@@ -22,8 +22,6 @@ if __name__ == "__main__":
         data_path = os.path.join(data_path, "data-picai-main")
         paths = get_picai_paths(data_path, fold, seq)
 
-    paths_set = set(paths)
-
     real_images = []
     real_kspaces = []
     simulated_kspaces = []
@@ -43,11 +41,11 @@ if __name__ == "__main__":
         simulated_kspace = downsize_kspace(simulated_kspace, size=256)
         simulated_image = convert_to_image(simulated_kspace)
 
-        if path in paths_set:
-            real_images.append(image)
-            real_kspaces.append(kspace)
-            simulated_kspaces.append(simulated_kspace)
-            simulated_images.append(simulated_image)
+        
+        real_images.append(image)
+        real_kspaces.append(kspace)
+        simulated_kspaces.append(simulated_kspace)
+        simulated_images.append(simulated_image)
 
     index = 0
     display(real_images[index],
