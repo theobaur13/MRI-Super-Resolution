@@ -12,6 +12,17 @@ def convert_to_image(kspace):
     image *= jnp.sqrt(kspace.shape[0] * kspace.shape[1] * kspace.shape[2])
     return image
 
+def downsize_kspace(kspace, size=256):
+    # Downsize the k-space to the specified size by cropping the edges about the center
+    center = np.array(kspace.shape) // 2
+    start = center - size // 2
+    end = center + size // 2
+    slices = [slice(None)] * 3
+    slices[0] = slice(start[0], end[0])
+    slices[1] = slice(start[1], end[1])
+    slices[2] = slice(start[2], end[2])
+    return kspace[tuple(slices)]
+
 def random_undersampling(kspace, factor=1.2):
     mask = np.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
     return kspace * mask

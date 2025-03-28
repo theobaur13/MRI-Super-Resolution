@@ -1,7 +1,7 @@
 import os
 from tqdm import tqdm
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display
-from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling
+from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
 from src.evaluation import psnr
 
 if __name__ == "__main__":
@@ -40,6 +40,7 @@ if __name__ == "__main__":
         kspace = convert_to_kspace(image)
         simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.5)
         simulated_kspace = random_undersampling(simulated_kspace, factor=1.05)
+        simulated_kspace = downsize_kspace(simulated_kspace, size=256)
         simulated_image = convert_to_image(simulated_kspace)
 
         if path in paths_set:
@@ -49,7 +50,6 @@ if __name__ == "__main__":
             simulated_images.append(simulated_image)
 
     index = 0
-    print("PSNR: ", psnr(real_images[index], simulated_images[index]))
     display(real_images[index],
             real_kspaces[index],
             simulated_kspaces[index],
