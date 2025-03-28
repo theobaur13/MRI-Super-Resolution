@@ -38,10 +38,8 @@ if __name__ == "__main__":
             image = read_metaimage(path)
         
         kspace = convert_to_kspace(image)
-        simulated_kspace = radial_undersampling(kspace, axis=axis, radius=80)
-        # simulated_kspace = variable_density_undersampling(kspace, factor=1.1, ks=30)
-        # simulated_kspace = random_undersampling(kspace, factor=1.2)
-        # simulated_kspace = cartesian_undersampling(kspace, axis=axis, factor=3)
+        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.5)
+        simulated_kspace = random_undersampling(simulated_kspace, factor=1.05)
         simulated_image = convert_to_image(simulated_kspace)
 
         if path in paths_set:
@@ -50,7 +48,7 @@ if __name__ == "__main__":
             simulated_kspaces.append(simulated_kspace)
             simulated_images.append(simulated_image)
 
-    index = 6
+    index = 0
     print("PSNR: ", psnr(real_images[index], simulated_images[index]))
     display(real_images[index],
             real_kspaces[index],

@@ -1,3 +1,4 @@
+import numpy as np
 import jax.numpy as jnp
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
 
@@ -12,7 +13,7 @@ def convert_to_image(kspace):
     return image
 
 def random_undersampling(kspace, factor=1.2):
-    mask = jnp.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
+    mask = np.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
     return kspace * mask
 
 def cartesian_undersampling(kspace, axis, factor=3):
@@ -24,7 +25,10 @@ def cartesian_undersampling(kspace, axis, factor=3):
     mask[tuple(slices)] = 0
     return kspace * mask
 
-def radial_undersampling(kspace, axis, radius=70):
+def radial_undersampling(kspace, axis, factor=0.5):
+    radius = int((kspace.shape[(axis + 1) % 3] * factor) // 2)
+    radius = max(radius, 1)
+
     # Create a mask that keeps only the center of the k-space, where the axis is the axis of slicing
     mask = jnp.zeros(kspace.shape)
     center = jnp.array(kspace.shape) // 2
@@ -36,7 +40,7 @@ def radial_undersampling(kspace, axis, radius=70):
         mask = jnp.where(jnp.sqrt((X - center[2])**2 + (Z - center[0])**2) <= radius, 1, 0)
     elif axis == 2:     # Cylinder along the x-axis
         mask = jnp.where(jnp.sqrt((Y - center[1])**2 + (Z - center[0])**2) <= radius, 1, 0)
-    
+
     return kspace * mask
 
 def variable_density_undersampling(kspace, factor=1.1, ks=30):
@@ -55,6 +59,6 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30):
     probabilities = 1 - distances
     probabilities = probabilities / factor
     probabilities = jnp.clip(probabilities, 0, 1)
-    mask = (jnp.random.rand(*kspace.shape) < probabilities).astype(int)
+    mask = (np.random.rand(*kspace.shape) < probabilities).astype(int)
 
     return kspace * mask

@@ -14,7 +14,7 @@ def get_brats_paths(data_dir, seq, dataset):
 
     return train_paths, validate_paths
 
-def get_picai_paths(data_dir, fold, seq, limit=10):
+def get_picai_paths(data_dir, fold, seq, limit=1):
     dir = os.path.join(data_dir, "images", f"fold{fold}")
 
     paths = []
@@ -49,7 +49,7 @@ def plot_matrix(ax, matrix, slice=10, cmap='gray', axis="z"):
         matrix = matrix[:, :, slice]
         
     ax.imshow(matrix, cmap=cmap)
-    ax.axis('off')
+    # ax.axis('off')
 
 def display(image, kspace, simulated_kspace, simulated_image, axis=0, highlight=False):
     fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
