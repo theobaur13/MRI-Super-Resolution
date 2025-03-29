@@ -7,9 +7,12 @@ from src.undersampling_sim import convert_to_kspace, convert_to_image, random_un
 from src.training import SRCNN_MRI, training_loop
 
 if __name__ == "__main__":
-    dataset_type = "prostate"                      # brain, prostate
-    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
+    dataset_type = "prostate"                      # brain, prostate
+    data_path = os.path.join(base_dir, "data")
+
+    print("Collecting paths...")
     if dataset_type == "brain":
         seq = "t2f"                                 # t1c, t1n, t2f, t2w
         dataset = "GLI"                             # BraSyn, GLI
@@ -31,6 +34,7 @@ if __name__ == "__main__":
     
     axis = 0                                                # 0: side view, 1: front view, 2: top view
     
+    print("Manipulating image k-spaces...")
     for path in tqdm(paths):
         if dataset_type == "brain":
             image = read_nifti(path)
@@ -63,6 +67,7 @@ if __name__ == "__main__":
 
     epochs = 10
     batch_size = 1
+    output_dir = os.path.join(base_dir, "output")
     
     LR = convert_to_tensor(simulated_images, slice_axis=axis)
     HR = convert_to_tensor(real_images, slice_axis=axis)
@@ -70,4 +75,5 @@ if __name__ == "__main__":
     print("LR shape:", LR.shape)  # Expected: (num_slices, 2, H, W)
     print("HR shape:", HR.shape)  # Expected: (num_slices, 2, H, W)
 
-    training_loop(model, optimizer, criterion, epochs, LR, HR)
+    print("Training model...")
+    training_loop(model, optimizer, criterion, epochs, LR, HR, output_dir=output_dir)

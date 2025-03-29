@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -17,7 +18,7 @@ class SRCNN_MRI(nn.Module):
         x = self.upsample(x)
         return x
     
-def training_loop(model, optimizer, criterion, epochs, LR, HR):
+def training_loop(model, optimizer, criterion, epochs, LR, HR, output_dir=None):
     for epoch in tqdm(range(epochs)):
         model.train()
         optimizer.zero_grad()
@@ -34,3 +35,6 @@ def training_loop(model, optimizer, criterion, epochs, LR, HR):
         
         if (epoch + 1) % 10 == 0:
             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+
+            if output_dir:
+                torch.save(model.state_dict(), f"{output_dir}/model_epoch_{epoch + 1}.pth")
