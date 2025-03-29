@@ -3,6 +3,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import SimpleITK as sitk
+import torch
 from tqdm import tqdm
 
 def get_brats_paths(data_dir, seq, dataset):
@@ -34,6 +35,24 @@ def read_nifti(file_path):
 def read_metaimage(file_path):
     img = sitk.ReadImage(file_path)
     return sitk.GetArrayFromImage(img)
+
+def convert_to_tensor(image_list, slice_axis):
+    real_slices = []
+    imag_slices = []
+
+    for img in image_list:
+        img_np = jnp.array(img)
+        for i in range(img_np.shape[slice_axis]):
+            slice_2d = img_np[i]
+            real_slices.append(slice_2d.real)
+            imag_slices.append(slice_2d.imag)
+    
+    real_slices = jnp.array(real_slices)
+    imag_slices = jnp.array(imag_slices)
+
+    real_tensor = torch.tensor(real_slices, dtype=torch.float32).unsqueeze(1)
+    imag_tensor = torch.tensor(imag_slices, dtype=torch.float32).unsqueeze(1)
+    return torch.cat((real_tensor, imag_tensor), dim=1)
 
 def plot_matrix(ax, matrix, slice=10, cmap='gray', axis="z"):
     # set NaN values to red on colormap
