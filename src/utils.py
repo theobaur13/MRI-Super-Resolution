@@ -54,7 +54,7 @@ def convert_to_tensor(image_list, slice_axis):
     imag_tensor = torch.tensor(imag_slices, dtype=torch.float32).unsqueeze(1)
     return torch.cat((real_tensor, imag_tensor), dim=1)
 
-def plot_matrix(ax, matrix, slice=10, cmap='gray', axis="z"):
+def plot_matrix(ax, matrix, slice=70, cmap='gray', axis="z"):
     # set NaN values to red on colormap
     cmap = plt.cm.gray
     cmap.set_bad(color='red')

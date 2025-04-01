@@ -4,18 +4,17 @@ import torch.optim as optim
 import torch.nn as nn
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display, convert_to_tensor
 from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
-from src.training import SRCNN_MRI, training_loop
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    dataset_type = "prostate"                      # brain, prostate
+    dataset_type = "brain"                      # brain, prostate
     data_path = os.path.join(base_dir, "data")
 
     print("Collecting paths...")
     if dataset_type == "brain":
         seq = "t2f"                                 # t1c, t1n, t2f, t2w
-        dataset = "GLI"                             # BraSyn, GLI
+        dataset = "BraSyn"                             # BraSyn, GLI
         
         data_path = os.path.join(data_path, "data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000")
         paths, validate_paths = get_brats_paths(data_path, seq, dataset)
@@ -32,7 +31,7 @@ if __name__ == "__main__":
     simulated_kspaces = []
     simulated_images = []
     
-    axis = 0                                                # 0: side view, 1: front view, 2: top view
+    axis = 2                                                # 0: side view, 1: front view, 2: top view
     
     print("Manipulating image k-spaces...")
     for path in tqdm(paths):
@@ -42,9 +41,9 @@ if __name__ == "__main__":
             image = read_metaimage(path)
         
         kspace = convert_to_kspace(image)
-        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.5)
+        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.4)
         simulated_kspace = random_undersampling(simulated_kspace, factor=1.05)
-        simulated_kspace = downsize_kspace(simulated_kspace, size=256)
+        simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=128)
         simulated_image = convert_to_image(simulated_kspace)
         
         real_images.append(image)
@@ -60,20 +59,3 @@ if __name__ == "__main__":
             axis=axis,
             highlight=True
     )
-
-    model = SRCNN_MRI(num_channels=2) # 2 channels for real and imaginary parts
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
-
-    epochs = 10
-    batch_size = 1
-    output_dir = os.path.join(base_dir, "output")
-    
-    LR = convert_to_tensor(simulated_images, slice_axis=axis)
-    HR = convert_to_tensor(real_images, slice_axis=axis)
-
-    print("LR shape:", LR.shape)  # Expected: (num_slices, 2, H, W)
-    print("HR shape:", HR.shape)  # Expected: (num_slices, 2, H, W)
-
-    print("Training model...")
-    training_loop(model, optimizer, criterion, epochs, LR, HR, output_dir=output_dir)

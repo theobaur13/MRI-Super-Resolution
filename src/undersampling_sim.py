@@ -12,18 +12,29 @@ def convert_to_image(kspace):
     image *= jnp.sqrt(kspace.shape[0] * kspace.shape[1] * kspace.shape[2])
     return image
 
-def downsize_kspace(kspace, size=256):
-    # Downsize the k-space to the specified size by cropping the edges about the center
+def downsize_kspace(kspace, axis, size=256):
+    # Crop the k-space to the specified size along the specified axis, keeping the aspect ratio
     center = np.array(kspace.shape) // 2
-    start = center - size // 2
-    end = center + size // 2
+    
+    # Create a mask that keeps only the center of the k-space, where the axis is the axis that is kept
     slices = [slice(None)] * 3
-    slices[0] = slice(start[0], end[0])
-    slices[1] = slice(start[1], end[1])
-    slices[2] = slice(start[2], end[2])
+    if axis == 0:       # Cylinder along the z-axis
+        longer_axis = 1 if kspace.shape[1] > kspace.shape[2] else 2
+        shorter_axis = 2 if longer_axis == 1 else 1
+    elif axis == 1:     # Cylinder along the y-axis
+        longer_axis = 0 if kspace.shape[0] > kspace.shape[2] else 2
+        shorter_axis = 2 if longer_axis == 0 else 0
+    elif axis == 2:     # Cylinder along the x-axis
+        longer_axis = 0 if kspace.shape[0] > kspace.shape[1] else 1
+        shorter_axis = 1 if longer_axis == 0 else 0
+
+    aspect_ratio = kspace.shape[longer_axis] / kspace.shape[shorter_axis]
+    slices[longer_axis] = slice(center[longer_axis] - size // 2, center[longer_axis] + size // 2)
+    slices[shorter_axis] = slice(center[shorter_axis] - int(size / aspect_ratio) // 2, center[shorter_axis] + int(size / aspect_ratio) // 2)
     return kspace[tuple(slices)]
 
-def random_undersampling(kspace, factor=1.2):
+def random_undersampling(kspace, factor=1.2, seed=42):
+    np.random.seed(seed)
     mask = np.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
     return kspace * mask
 
