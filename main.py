@@ -1,16 +1,22 @@
 import os
+import sys
 from tqdm import tqdm
 import torch.optim as optim
 import torch.nn as nn
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display, convert_to_tensor
-from src.undersampling_sim import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
+from simulation import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    dataset_type = "brain"                      # brain, prostate
     data_path = os.path.join(base_dir, "data")
 
+    # Command line arguments for dataset type
+    if len(sys.argv) < 2:
+        print("Usage: python main.py [dataset_type]")
+        print("dataset_type: brain or prostate")
+        sys.exit(1)
+    dataset_type = sys.argv[1].lower()
+    
     print("Collecting paths...")
     if dataset_type == "brain":
         seq = "t2f"                                 # t1c, t1n, t2f, t2w
@@ -31,7 +37,7 @@ if __name__ == "__main__":
     simulated_kspaces = []
     simulated_images = []
     
-    axis = 2                                                # 0: side view, 1: front view, 2: top view
+    axis = 0                                                # 0: side view, 1: front view, 2: top view
     
     print("Manipulating image k-spaces...")
     for path in tqdm(paths):
@@ -51,7 +57,7 @@ if __name__ == "__main__":
         simulated_kspaces.append(simulated_kspace)
         simulated_images.append(simulated_image)
 
-    index = 0
+    index = 9
     display(real_images[index],
             real_kspaces[index],
             simulated_kspaces[index],
