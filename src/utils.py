@@ -6,6 +6,22 @@ import SimpleITK as sitk
 import torch
 from tqdm import tqdm
 
+def t1_5_vs_t3(t1_5_paths, t3_paths, axis):
+    t1_5_images = []
+    t3_images = []
+    for path in tqdm(t1_5_paths):
+        image = read_nifti(path)
+        t1_5_images.append(image)
+    for path in tqdm(t3_paths):
+        image = read_nifti(path)
+        t3_images.append(image)
+
+    display_t1_5_vs_t3(
+        t1_5_images[0],
+        t3_images[1],
+        axis=axis
+    )
+
 def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")
     validate_dir = os.path.join(data_dir, dataset, "validate")
@@ -27,6 +43,19 @@ def get_picai_paths(data_dir, fold, seq, limit=1):
                 if len(paths) == limit:
                     return paths
     return paths
+
+def get_ixi_paths(data_dir, limit=10):
+    t1_5 = []
+    t3 = []
+    for file in tqdm(os.listdir(data_dir)):
+        if file.endswith(".nii.gz") and "HH" in file:
+            t3.append(os.path.join(data_dir, file))
+        elif file.endswith(".nii.gz") and "HH" not in file:
+            t1_5.append(os.path.join(data_dir, file))
+    t1_5 = t1_5[:limit]
+    t3 = t3[:limit]
+
+    return t1_5, t3
 
 def read_nifti(file_path):
     img = nib.load(file_path)
@@ -70,27 +99,40 @@ def plot_matrix(ax, matrix, slice=70, cmap='gray', axis="z"):
     ax.imshow(matrix, cmap=cmap)
     # ax.axis('off')
 
-def display(image, kspace, simulated_kspace, simulated_image, axis=0, highlight=False):
-    fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
-    
-    plot_matrix(axes_images[0], image, axis=axis)
-    axes_images[0].set_title('Original Image')
-    
-    plot_matrix(axes_images[1], simulated_image, axis=axis)
-    axes_images[1].set_title('Simulated Image')
+def display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=0, highlight=False, show_kspace=True, show_image=True):
+    if show_image:
+        fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
+        
+        plot_matrix(axes_images[0], image, axis=axis)
+        axes_images[0].set_title('Original Image')
+        
+        plot_matrix(axes_images[1], simulated_image, axis=axis)
+        axes_images[1].set_title('Simulated Image')
 
-    plt.tight_layout()
-    plt.show(block=False)  
-
-    fig_kspace, axes_kspace = plt.subplots(1, 2, figsize=(9, 4))
-
-    plot_matrix(axes_kspace[0], kspace, axis=axis)
-    axes_kspace[0].set_title('Original k-space')
+        plt.tight_layout()
+        plt.show(block=False)  
     
-    if highlight:
-        simulated_kspace = jnp.where(simulated_kspace == 0, jnp.nan, simulated_kspace)
-    plot_matrix(axes_kspace[1], simulated_kspace, axis=axis)
-    axes_kspace[1].set_title('Simulated k-space')
-    
+    if show_kspace:
+        fig_kspace, axes_kspace = plt.subplots(1, 2, figsize=(9, 4))
+
+        plot_matrix(axes_kspace[0], kspace, axis=axis)
+        axes_kspace[0].set_title('Original k-space')
+        
+        if highlight:
+            simulated_kspace = jnp.where(simulated_kspace == 0, jnp.nan, simulated_kspace)
+        plot_matrix(axes_kspace[1], simulated_kspace, axis=axis)
+        axes_kspace[1].set_title('Simulated k-space')
+        
+        plt.tight_layout()
+        plt.show()
+
+def display_t1_5_vs_t3(t1_5, t3, axis=0):
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+
+    plot_matrix(axes[0], t1_5, axis=axis)
+    axes[0].set_title('T1-5 Image')
+
+    plot_matrix(axes[1], t3, axis=axis)
+    axes[1].set_title('T3 Image')
     plt.tight_layout()
     plt.show()
