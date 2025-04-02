@@ -4,7 +4,7 @@ from tqdm import tqdm
 import torch.optim as optim
 import torch.nn as nn
 from src.utils import read_nifti, read_metaimage, get_brats_paths, get_picai_paths, display, convert_to_tensor
-from simulation import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
+from src.simulation import convert_to_kspace, convert_to_image, random_undersampling, cartesian_undersampling, radial_undersampling, variable_density_undersampling, downsize_kspace
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +16,7 @@ if __name__ == "__main__":
         print("dataset_type: brain or prostate")
         sys.exit(1)
     dataset_type = sys.argv[1].lower()
-    
+
     print("Collecting paths...")
     if dataset_type == "brain":
         seq = "t2f"                                 # t1c, t1n, t2f, t2w
