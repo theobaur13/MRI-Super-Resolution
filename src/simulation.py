@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
 from tqdm import tqdm
 from src.utils import *
+from src.display import *
 
 def generate_simulated_images(paths, dataset_type, axis):
     real_images = []
@@ -19,9 +20,8 @@ def generate_simulated_images(paths, dataset_type, axis):
             image = read_nifti(path)
 
         kspace = convert_to_kspace(image)
-        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.4)
-        # simulated_kspace = random_undersampling(simulated_kspace, factor=1.05)
-        simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=128)
+        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
+        simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=192)
         simulated_image = convert_to_image(simulated_kspace)
         
         real_images.append(image)
@@ -29,7 +29,7 @@ def generate_simulated_images(paths, dataset_type, axis):
         simulated_kspaces.append(simulated_kspace)
         simulated_images.append(simulated_image)
 
-    index = 9
+    index = 1
     display_simulated_comparison(real_images[index],
             simulated_images[index],
             real_kspaces[index],
@@ -38,6 +38,22 @@ def generate_simulated_images(paths, dataset_type, axis):
             highlight=True,
             show_kspace=True,
             show_image=True,
+    )
+
+def t1_5_vs_t3(t1_5_paths, t3_paths, axis):
+    t1_5_images = []
+    t3_images = []
+    for path in tqdm(t1_5_paths):
+        image = read_nifti(path)
+        t1_5_images.append(image)
+    for path in tqdm(t3_paths):
+        image = read_nifti(path)
+        t3_images.append(image)
+
+    display_t1_5_vs_t3(
+        t1_5_images[1],
+        t3_images[1],
+        axis=axis
     )
 
 def convert_to_kspace(image):

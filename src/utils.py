@@ -5,22 +5,7 @@ import jax.numpy as jnp
 import SimpleITK as sitk
 import torch
 from tqdm import tqdm
-
-def t1_5_vs_t3(t1_5_paths, t3_paths, axis):
-    t1_5_images = []
-    t3_images = []
-    for path in tqdm(t1_5_paths):
-        image = read_nifti(path)
-        t1_5_images.append(image)
-    for path in tqdm(t3_paths):
-        image = read_nifti(path)
-        t3_images.append(image)
-
-    display_t1_5_vs_t3(
-        t1_5_images[0],
-        t3_images[1],
-        axis=axis
-    )
+import numpy as np
 
 def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")
@@ -44,7 +29,7 @@ def get_picai_paths(data_dir, fold, seq, limit=1):
                     return paths
     return paths
 
-def get_ixi_paths(data_dir, limit=10):
+def get_ixi_paths(data_dir, limit=2):
     t1_5 = []
     t3 = []
     for file in tqdm(os.listdir(data_dir)):
@@ -82,57 +67,3 @@ def convert_to_tensor(image_list, slice_axis):
     real_tensor = torch.tensor(real_slices, dtype=torch.float32).unsqueeze(1)
     imag_tensor = torch.tensor(imag_slices, dtype=torch.float32).unsqueeze(1)
     return torch.cat((real_tensor, imag_tensor), dim=1)
-
-def plot_matrix(ax, matrix, slice=70, cmap='gray', axis="z"):
-    # set NaN values to red on colormap
-    cmap = plt.cm.gray
-    cmap.set_bad(color='red')
-    
-    matrix = matrix.real
-    if axis == 0:
-        matrix = matrix[slice, :, :]
-    elif axis == 1:
-        matrix = matrix[:, slice, :]
-    elif axis == 2:
-        matrix = matrix[:, :, slice]
-        
-    ax.imshow(matrix, cmap=cmap)
-    # ax.axis('off')
-
-def display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=0, highlight=False, show_kspace=True, show_image=True):
-    if show_image:
-        fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
-        
-        plot_matrix(axes_images[0], image, axis=axis)
-        axes_images[0].set_title('Original Image')
-        
-        plot_matrix(axes_images[1], simulated_image, axis=axis)
-        axes_images[1].set_title('Simulated Image')
-
-        plt.tight_layout()
-        plt.show(block=False)  
-    
-    if show_kspace:
-        fig_kspace, axes_kspace = plt.subplots(1, 2, figsize=(9, 4))
-
-        plot_matrix(axes_kspace[0], kspace, axis=axis)
-        axes_kspace[0].set_title('Original k-space')
-        
-        if highlight:
-            simulated_kspace = jnp.where(simulated_kspace == 0, jnp.nan, simulated_kspace)
-        plot_matrix(axes_kspace[1], simulated_kspace, axis=axis)
-        axes_kspace[1].set_title('Simulated k-space')
-        
-        plt.tight_layout()
-        plt.show()
-
-def display_t1_5_vs_t3(t1_5, t3, axis=0):
-    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
-
-    plot_matrix(axes[0], t1_5, axis=axis)
-    axes[0].set_title('T1-5 Image')
-
-    plot_matrix(axes[1], t3, axis=axis)
-    axes[1].set_title('T3 Image')
-    plt.tight_layout()
-    plt.show()

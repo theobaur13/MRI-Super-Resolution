@@ -35,7 +35,7 @@ if __name__ == "__main__":
     elif dataset_type == "ixi":
         data_path = os.path.join(data_path, "IXI-T2")
         t1_5_paths, t3_paths = get_ixi_paths(data_path)
-        paths = t1_5_paths + t3_paths
+        paths = t3_paths
 
-    t1_5_vs_t3(t1_5_paths, t3_paths, axis=1)
-    generate_simulated_images(paths, dataset_type, axis=1)
+    t1_5_vs_t3(t1_5_paths, t3_paths, axis=0)
+    generate_simulated_images(paths, dataset_type, axis=0)
