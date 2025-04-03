@@ -1,8 +1,5 @@
 import os
 import sys
-from tqdm import tqdm
-import torch.optim as optim
-import torch.nn as nn
 from src.utils import *
 from src.simulation import *
 from src.data_routing import *
@@ -39,4 +36,26 @@ if __name__ == "__main__":
         paths = t3_paths
 
     t1_5_vs_t3(t1_5_paths, t3_paths, axis=0)
-    generate_simulated_images(paths, dataset_type, axis=0)
+
+    real_images = []
+    real_kspaces = []
+    simulated_kspaces = []
+    simulated_images = []
+
+    axis = 0
+    for path in tqdm(paths):
+        if dataset_type == "brats":
+            image = read_nifti(path)
+        elif dataset_type == "pccai":
+            image = read_metaimage(path)
+        elif dataset_type == "ixi":
+            image = read_nifti(path)
+
+        kspace = convert_to_kspace(image)
+        simulated_image, simulated_kspace = generate_simulated_image(kspace, axis=axis)
+        real_images.append(image)
+        real_kspaces.append(kspace)
+        simulated_kspaces.append(simulated_kspace)
+        simulated_images.append(simulated_image)
+
+    display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=axis, highlight=True, show_kspace=True, show_image=True)

@@ -5,40 +5,12 @@ from tqdm import tqdm
 from src.utils import *
 from src.display import *
 
-def generate_simulated_images(paths, dataset_type, axis):
-    real_images = []
-    real_kspaces = []
-    simulated_kspaces = []
-    simulated_images = []
-
-    for path in tqdm(paths):
-        if dataset_type == "brats":
-            image = read_nifti(path)
-        elif dataset_type == "pccai":
-            image = read_metaimage(path)
-        elif dataset_type == "ixi":
-            image = read_nifti(path)
-
-        kspace = convert_to_kspace(image)
-        simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
-        simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=192)
-        simulated_image = convert_to_image(simulated_kspace)
+def generate_simulated_image(kspace, axis):
+    simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
+    # simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=192)
+    simulated_image = convert_to_image(simulated_kspace)
         
-        real_images.append(image)
-        real_kspaces.append(kspace)
-        simulated_kspaces.append(simulated_kspace)
-        simulated_images.append(simulated_image)
-
-    index = 1
-    display_simulated_comparison(real_images[index],
-            simulated_images[index],
-            real_kspaces[index],
-            simulated_kspaces[index],
-            axis=axis,
-            highlight=True,
-            show_kspace=True,
-            show_image=True,
-    )
+    return simulated_image, simulated_kspace
 
 def t1_5_vs_t3(t1_5_paths, t3_paths, axis):
     t1_5_images = []

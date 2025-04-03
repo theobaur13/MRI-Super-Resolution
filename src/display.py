@@ -17,14 +17,14 @@ def plot_matrix(ax, matrix, slice=65, cmap='gray', axis="z"):
     ax.imshow(matrix, cmap=cmap)
     # ax.axis('off')
 
-def display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=0, highlight=False, show_kspace=True, show_image=True):
+def display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=0, highlight=False, show_kspace=True, show_image=True, slice=65):
     if show_image:
         fig_images, axes_images = plt.subplots(1, 2, figsize=(9, 4))
         
-        plot_matrix(axes_images[0], image, axis=axis)
+        plot_matrix(axes_images[0], image, axis=axis, slice=slice)
         axes_images[0].set_title('Original Image (3T)')
         
-        plot_matrix(axes_images[1], simulated_image, axis=axis)
+        plot_matrix(axes_images[1], simulated_image, axis=axis, slice=slice)
         axes_images[1].set_title('Simulated Image (1.5T)')
 
         plt.tight_layout()
@@ -33,12 +33,12 @@ def display_simulated_comparison(image, simulated_image, kspace, simulated_kspac
     if show_kspace:
         fig_kspace, axes_kspace = plt.subplots(1, 2, figsize=(9, 4))
 
-        plot_matrix(axes_kspace[0], kspace, axis=axis)
+        plot_matrix(axes_kspace[0], kspace, axis=axis, slice=slice)
         axes_kspace[0].set_title('Original k-space')
         
         if highlight:
             simulated_kspace = jnp.where(simulated_kspace == 0, jnp.nan, simulated_kspace)
-        plot_matrix(axes_kspace[1], simulated_kspace, axis=axis)
+        plot_matrix(axes_kspace[1], simulated_kspace, axis=axis, slice=slice)
         axes_kspace[1].set_title('Simulated k-space')
         
         plt.tight_layout()
