@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn as nn
 from src.utils import *
 from src.simulation import *
+from src.data_routing import *
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
