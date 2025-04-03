@@ -3,6 +3,9 @@ import nibabel as nib
 import jax.numpy as jnp
 import SimpleITK as sitk
 import torch
+import pydicom
+import os
+from tqdm import tqdm
 
 def read_nifti(file_path):
     img = nib.load(file_path)
@@ -11,6 +14,18 @@ def read_nifti(file_path):
 def read_metaimage(file_path):
     img = sitk.ReadImage(file_path)
     return sitk.GetArrayFromImage(img)
+
+def read_dicom(mri_dir):
+    slices = []
+    files = os.listdir(mri_dir)
+    files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
+    for file in tqdm(files):
+        if file.endswith(".dcm"):
+            dicom_path = os.path.join(mri_dir, file)
+            img = pydicom.dcmread(dicom_path)
+            slices.append(img.pixel_array)
+
+    return jnp.stack(slices, axis=0)
 
 def convert_to_tensor(image_list, slice_axis):
     real_slices = []
