@@ -1,46 +1,8 @@
-import os
+import pandas as pd
 import nibabel as nib
-import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import SimpleITK as sitk
 import torch
-from tqdm import tqdm
-import numpy as np
-
-def get_brats_paths(data_dir, seq, dataset):
-    train_dir = os.path.join(data_dir, dataset, "train")
-    validate_dir = os.path.join(data_dir, dataset, "validate")
-
-    train_paths = [os.path.join(train_dir, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(train_dir)]
-    validate_paths = [os.path.join(validate_dir, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(validate_dir)]
-
-    return train_paths, validate_paths
-
-def get_picai_paths(data_dir, fold, seq, limit=1):
-    dir = os.path.join(data_dir, "images", f"fold{fold}")
-
-    paths = []
-    for patient in tqdm(os.listdir(dir)):
-        patient_dir = os.path.join(dir, patient)
-        for file in os.listdir(patient_dir):
-            if file.endswith(f"{seq}.mha"):
-                paths.append(os.path.join(patient_dir, file))
-                if len(paths) == limit:
-                    return paths
-    return paths
-
-def get_ixi_paths(data_dir, limit=2):
-    t1_5 = []
-    t3 = []
-    for file in tqdm(os.listdir(data_dir)):
-        if file.endswith(".nii.gz") and "HH" in file:
-            t3.append(os.path.join(data_dir, file))
-        elif file.endswith(".nii.gz") and "HH" not in file:
-            t1_5.append(os.path.join(data_dir, file))
-    t1_5 = t1_5[:limit]
-    t3 = t3[:limit]
-
-    return t1_5, t3
 
 def read_nifti(file_path):
     img = nib.load(file_path)
@@ -67,3 +29,25 @@ def convert_to_tensor(image_list, slice_axis):
     real_tensor = torch.tensor(real_slices, dtype=torch.float32).unsqueeze(1)
     imag_tensor = torch.tensor(imag_slices, dtype=torch.float32).unsqueeze(1)
     return torch.cat((real_tensor, imag_tensor), dim=1)
+
+def adni_search(input_path, output_path):
+    df = pd.read_csv(input_path)
+    df['Field Strength'] = df['Imaging Protocol'].str.extract(r'(\d+\.\d+)').astype(float)
+
+    # Filter Description must be "Axial PD/T2 FSE" or "Double_TSE"
+    df = df[df['Description'].isin(["Axial PD/T2 FSE", "Double_TSE"])]
+
+    # Group by Subject ID and Study Date, then filter for subjects that have both 1.5T and 3T
+    valid_subjects = df.groupby(['Subject ID', 'Study Date'])['Field Strength'].nunique()
+    valid_subjects = valid_subjects[valid_subjects > 1].index  # Keep only those with more than one unique field strength
+
+    # Filter the original DataFrame
+    filtered_df = df[df.set_index(['Subject ID', 'Study Date']).index.isin(valid_subjects)]
+
+    # Save image ids to a txt file in comma-separated format (image_id_1, image_id_2, ...)
+    image_ids = filtered_df['Image ID'].tolist()
+    image_ids = [str(id) for id in image_ids]
+    image_ids_str = ', '.join(image_ids)
+
+    with open(output_path, 'w') as f:
+        f.write(image_ids_str)
