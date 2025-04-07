@@ -35,7 +35,10 @@ if __name__ == "__main__":
         t1_5_paths, t3_paths = get_ixi_paths(data_path)
         paths = t3_paths
 
-    t1_5_vs_t3(t1_5_paths, t3_paths, axis=0)
+    elif dataset_type == "adni":
+        data_path = os.path.join(data_path, "ADNI")
+        t1_5_paths, t3_paths = get_adni_paths(data_path)
+        paths = t3_paths
 
     real_images = []
     real_kspaces = []
@@ -50,6 +53,8 @@ if __name__ == "__main__":
             image = read_metaimage(path)
         elif dataset_type == "ixi":
             image = read_nifti(path)
+        elif dataset_type == "adni":
+            image = read_dicom(path)
 
         kspace = convert_to_kspace(image)
         simulated_image, simulated_kspace = generate_simulated_image(kspace, axis=axis)

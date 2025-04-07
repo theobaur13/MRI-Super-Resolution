@@ -35,3 +35,29 @@ def get_ixi_paths(data_dir, limit=2):
     t3 = t3[:limit]
 
     return t1_5, t3
+
+def get_adni_paths(data_dir, limit=1):
+    scans_dir = os.path.join(data_dir, "scans")
+    t1_5 = []
+    t3 = []
+    for patient_dir in tqdm(os.listdir(scans_dir)):
+        for scan_dir in os.listdir(os.path.join(scans_dir, patient_dir)):
+
+            if scan_dir.endswith("Axial_PD_T2_FSE"):
+                visit_dir = os.path.join(scans_dir, patient_dir, scan_dir)
+                for visit in os.listdir(visit_dir):
+                    for image_dir in os.listdir(os.path.join(visit_dir, visit)):
+                        t1_5.append(os.path.join(visit_dir, visit, image_dir))
+
+            elif scan_dir.endswith("Double_TSE"):
+                visit_dir = os.path.join(scans_dir, patient_dir, scan_dir)
+                for visit in os.listdir(visit_dir):
+                    for image_dir in os.listdir(os.path.join(visit_dir, visit)):
+                        print(os.path.join(visit_dir, visit, image_dir))
+                        t3.append(os.path.join(visit_dir, visit, image_dir))
+
+    t1_5 = t1_5[:limit]
+    t3 = t3[:limit]
+    return t1_5, t3
+                
+    

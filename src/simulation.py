@@ -12,22 +12,6 @@ def generate_simulated_image(kspace, axis):
         
     return simulated_image, simulated_kspace
 
-def t1_5_vs_t3(t1_5_paths, t3_paths, axis):
-    t1_5_images = []
-    t3_images = []
-    for path in tqdm(t1_5_paths):
-        image = read_nifti(path)
-        t1_5_images.append(image)
-    for path in tqdm(t3_paths):
-        image = read_nifti(path)
-        t3_images.append(image)
-
-    display_t1_5_vs_t3(
-        t1_5_images[1],
-        t3_images[1],
-        axis=axis
-    )
-
 def convert_to_kspace(image):
     kspace = fftshift(fftn(ifftshift(image), axes=(0, 1, 2)))
     kspace /= jnp.sqrt(kspace.shape[0] * kspace.shape[1] * kspace.shape[2])
