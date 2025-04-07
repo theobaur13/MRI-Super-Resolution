@@ -32,18 +32,18 @@ def display_comparison(image_1, image_2, slice=24, axis=0, kspace=True):
     plt.tight_layout()
     plt.show(block=False)
 
-def plot_3d_kspace(kspaces, slice_idx, axis=0, cmap="viridis"):
+def plot_3d_kspace(kspaces, slice_idx, axis=0, cmap="viridis", limit=True):
     fig = plt.figure(figsize=(15, 10))
 
     for i, kspace in enumerate(kspaces):
         ax = fig.add_subplot(1, len(kspaces), i + 1, projection='3d')
-        plot_surface(ax, kspace, slice_idx, axis=axis, cmap=cmap)
+        plot_surface(ax, kspace, slice_idx, axis=axis, cmap=cmap, limit=limit)
         ax.set_title(f"K-space {i+1}")
 
     plt.tight_layout()
     plt.show(block=False)
 
-def plot_surface(ax, matrix, slice_idx, axis=0, cmap="viridis"):
+def plot_surface(ax, matrix, slice_idx, axis=0, cmap="viridis", limit=True):
     """Plots a 3D surface of a 2D slice from a 3D matrix."""
     if axis == 0:
         data_slice = np.abs(matrix[slice_idx, :, :])  # Take absolute to handle complex values
@@ -58,4 +58,5 @@ def plot_surface(ax, matrix, slice_idx, axis=0, cmap="viridis"):
     ax.set_ylabel("Y-axis")
     ax.set_zlabel("Intensity")
     ax.view_init(elev=30, azim=135)  # Adjust viewing angle
-    ax.set_zlim(0, 50000)  
+    if limit:
+        ax.set_zlim(0, 50000)

@@ -62,5 +62,3 @@ if __name__ == "__main__":
         real_kspaces.append(kspace)
         simulated_kspaces.append(simulated_kspace)
         simulated_images.append(simulated_image)
-
-    # display_simulated_comparison(image, simulated_image, kspace, simulated_kspace, axis=axis, highlight=True, show_kspace=True, show_image=True)

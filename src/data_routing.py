@@ -36,7 +36,7 @@ def get_ixi_paths(data_dir, limit=2):
 
     return t1_5, t3
 
-def get_adni_paths(data_dir, limit=1):
+def get_adni_paths(data_dir, limit=10):
     scans_dir = os.path.join(data_dir, "scans")
     t1_5 = []
     t3 = []

@@ -7,9 +7,10 @@ from src.display import *
 
 def generate_simulated_image(kspace, axis):
     simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
-    # simulated_kspace = downsize_kspace(simulated_kspace, axis=axis, size=192)
+    simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=7)
     simulated_image = convert_to_image(simulated_kspace)
-        
+    simulated_image = gaussian_plane(simulated_image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
+    simulated_image = random_noise(simulated_image, intensity=250, frequency=0.3)
     return simulated_image, simulated_kspace
 
 def convert_to_kspace(image):
@@ -95,11 +96,20 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30):
 
     return kspace * mask
 
-def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20):
+def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20, invert=False):
     x = np.linspace(0, 1, kspace.shape[axis])
     y = np.linspace(0, 1, kspace.shape[(axis + 1) % 3])
     z = np.linspace(0, 1, kspace.shape[(axis + 2) % 3])
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
     gaussian = A * np.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
+    if invert:
+        gaussian = np.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
     return kspace * gaussian
+
+def random_noise(image, intensity=0.1, frequency=0.1):
+    noise_mask = np.random.rand(*image.shape) < frequency
+    random_noise = np.random.uniform(-intensity, intensity, size=image.shape)
+    noise = noise_mask * random_noise
+
+    return image + noise
