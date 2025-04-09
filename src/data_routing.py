@@ -1,7 +1,6 @@
 import os
 from tqdm import tqdm
 import shutil
-import re
 
 def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")

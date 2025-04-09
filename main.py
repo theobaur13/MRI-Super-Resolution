@@ -39,10 +39,18 @@ if __name__ == "__main__":
         T3_kspace = convert_to_kspace(image_T3)
         simulated_image, simulated_kspace = generate_simulated_image(T3_kspace, axis=0)
 
-        slice_idx = 42
-        display_comparison(image_T1_5, image_T3, slice=slice_idx, axis=0, kspace=False)
-        display_comparison(image_T1_5, simulated_image, slice=slice_idx, axis=0, kspace=False)
-        plot_3d_kspace([T1_5_kspace, T3_kspace, simulated_kspace], slice_idx, axis=0, cmap="viridis")
+        axis = 0
+        slice_idx = 24
+
+        max_value = max(
+            robust_max(T1_5_kspace, axis, slice_idx),
+            robust_max(T3_kspace, axis, slice_idx),
+            robust_max(simulated_kspace, axis, slice_idx)
+        ) * slice_idx * 10
+
+        display_comparison(image_T1_5, image_T3, slice=slice_idx, axis=axis, kspace=False)
+        display_comparison(image_T1_5, simulated_image, slice=slice_idx, axis=axis, kspace=False)
+        plot_3d_kspace([T1_5_kspace, T3_kspace, simulated_kspace], slice_idx, axis=axis, cmap="viridis", limit=max_value)
         plt.show()
 
     elif action == "batch-convert":

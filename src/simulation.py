@@ -1,7 +1,6 @@
 import numpy as np
 import jax.numpy as jnp
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
-from tqdm import tqdm
 from src.utils import *
 from src.display import *
 
