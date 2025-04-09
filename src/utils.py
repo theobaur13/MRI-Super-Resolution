@@ -96,11 +96,10 @@ def get_adni_pair(df, index):
     df_1_5T = df_1_5T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
     patient_id, date, image_id = list(df_1_5T.groups.keys())[index][0], list(df_1_5T.groups.keys())[index][1], list(df_1_5T.groups.keys())[index][2]
     paths_1_5T = df_1_5T.get_group((patient_id, date, image_id))["File Path"].tolist()
-    print(f"Patient ID: {patient_id}, Date: {date}, Image ID: {image_id}")
 
     df_3T = df[df["Description"] == "Double_TSE"]
     df_3T = df_3T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
     _, _, image_id = list(df_3T.groups.keys())[index][0], list(df_3T.groups.keys())[index][1], list(df_3T.groups.keys())[index][2]
     paths_3T = df_3T.get_group((patient_id, date, image_id))["File Path"].tolist()
-    print(f"Patient ID: {patient_id}, Date: {date}, Image ID: {image_id}")
+    
     return paths_1_5T, paths_3T

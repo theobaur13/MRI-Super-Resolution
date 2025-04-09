@@ -25,7 +25,7 @@ if __name__ == "__main__":
             print("Usage: python main.py simulate [index]")
             sys.exit(1)
 
-        index = sys.argv[1].lower()
+        index = int(sys.argv[2].lower())
         dir = os.path.join(data_path, "ADNI_collapsed")
         df = adni_dataframe(dir)
         paths_1_5T, paths_3T = get_adni_pair(df, index)
