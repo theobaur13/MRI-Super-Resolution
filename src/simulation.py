@@ -7,10 +7,10 @@ from src.display import *
 
 def generate_simulated_image(kspace, axis):
     simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
-    simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=7)
+    simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
     simulated_image = convert_to_image(simulated_kspace)
     simulated_image = gaussian_plane(simulated_image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
-    simulated_image = random_noise(simulated_image, intensity=250, frequency=0.3)
+    simulated_image = random_noise(simulated_image, intensity=0.01, frequency=0.3)
     return simulated_image, simulated_kspace
 
 def convert_to_kspace(image):

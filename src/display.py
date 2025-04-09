@@ -59,4 +59,4 @@ def plot_surface(ax, matrix, slice_idx, axis=0, cmap="viridis", limit=True):
     ax.set_zlabel("Intensity")
     ax.view_init(elev=30, azim=135)  # Adjust viewing angle
     if limit:
-        ax.set_zlim(0, 50000)
+        ax.set_zlim(0, 10)

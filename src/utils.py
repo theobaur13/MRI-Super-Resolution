@@ -21,7 +21,9 @@ def read_dicom(files):
             img = pydicom.dcmread(file)
             slices.append(img.pixel_array)
 
-    return jnp.stack(slices, axis=0)
+    image = jnp.stack(slices, axis=0)
+    normalized_image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image))
+    return normalized_image
 
 def convert_to_tensor(image_list, slice_axis):
     real_slices = []
