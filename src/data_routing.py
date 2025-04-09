@@ -1,5 +1,7 @@
 import os
 from tqdm import tqdm
+import shutil
+import re
 
 def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")
@@ -9,32 +11,6 @@ def get_brats_paths(data_dir, seq, dataset):
     validate_paths = [os.path.join(validate_dir, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(validate_dir)]
 
     return train_paths, validate_paths
-
-def get_picai_paths(data_dir, fold, seq, limit=1):
-    dir = os.path.join(data_dir, "images", f"fold{fold}")
-
-    paths = []
-    for patient in tqdm(os.listdir(dir)):
-        patient_dir = os.path.join(dir, patient)
-        for file in os.listdir(patient_dir):
-            if file.endswith(f"{seq}.mha"):
-                paths.append(os.path.join(patient_dir, file))
-                if len(paths) == limit:
-                    return paths
-    return paths
-
-def get_ixi_paths(data_dir, limit=2):
-    t1_5 = []
-    t3 = []
-    for file in tqdm(os.listdir(data_dir)):
-        if file.endswith(".nii.gz") and "HH" in file:
-            t3.append(os.path.join(data_dir, file))
-        elif file.endswith(".nii.gz") and "HH" not in file:
-            t1_5.append(os.path.join(data_dir, file))
-    t1_5 = t1_5[:limit]
-    t3 = t3[:limit]
-
-    return t1_5, t3
 
 def get_adni_paths(data_dir, limit=10):
     scans_dir = os.path.join(data_dir, "scans")
@@ -53,11 +29,29 @@ def get_adni_paths(data_dir, limit=10):
                 visit_dir = os.path.join(scans_dir, patient_dir, scan_dir)
                 for visit in os.listdir(visit_dir):
                     for image_dir in os.listdir(os.path.join(visit_dir, visit)):
-                        print(os.path.join(visit_dir, visit, image_dir))
                         t3.append(os.path.join(visit_dir, visit, image_dir))
 
     t1_5 = t1_5[:limit]
     t3 = t3[:limit]
     return t1_5, t3
-                
-    
+
+def collapse_adni(adni_dir, output_dir):
+    t1_5_paths, t3_paths = get_adni_paths(adni_dir, limit=100000)
+    paths = t1_5_paths + t3_paths
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    for dir in tqdm(paths):
+        contents = os.listdir(dir)
+        timestamp = dir.split("\\")[-2]
+        timestamp = timestamp.replace(".0", "")
+        timestamp = timestamp.replace("_", "")
+        timestamp = timestamp.replace("-", "")
+
+        for file in contents:
+            if file.endswith(".dcm"):
+                old_name = file
+                parts = old_name.split("_")
+                parts[-4] = timestamp
+                new_name = "_".join(parts)
+                shutil.copy(os.path.join(dir, file), os.path.join(output_dir, new_name))

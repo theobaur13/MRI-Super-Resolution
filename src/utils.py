@@ -6,23 +6,19 @@ import torch
 import pydicom
 import os
 from tqdm import tqdm
+import re
+from datetime import datetime
 
 def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def read_metaimage(file_path):
-    img = sitk.ReadImage(file_path)
-    return sitk.GetArrayFromImage(img)
-
-def read_dicom(mri_dir):
+def read_dicom(files):
     slices = []
-    files = os.listdir(mri_dir)
     files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
     for file in tqdm(files):
         if file.endswith(".dcm"):
-            dicom_path = os.path.join(mri_dir, file)
-            img = pydicom.dcmread(dicom_path)
+            img = pydicom.dcmread(file)
             slices.append(img.pixel_array)
 
     return jnp.stack(slices, axis=0)
@@ -66,3 +62,45 @@ def adni_search(input_path, output_path):
 
     with open(output_path, 'w') as f:
         f.write(image_ids_str)
+
+def adni_dataframe(collapsed_path):
+    data = []
+
+    pattern = re.compile(
+        r'ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)'
+    )
+
+    for file in tqdm(os.listdir(collapsed_path)):
+        match = pattern.match(file)
+        if match:
+            patient_id = match.group(1)
+            description = match.group(2)
+            timestamp_raw = match.group(3)
+            slice_number = match.group(4)
+            image_id = match.group(5)
+            full_path = os.path.join(collapsed_path, file)
+
+            data.append({
+                'Patient ID': patient_id,
+                'Description': description,
+                'Timestamp': datetime.strptime(timestamp_raw, '%Y%m%d%H%M%S%f').date(),
+                'Slice Number': int(slice_number),
+                'Image ID': image_id,
+                'File Path': full_path
+            })
+
+    return pd.DataFrame(data)
+
+def get_adni_pair(df, index):
+    df_1_5T = df[df["Description"] == "Axial_PD_T2_FSE_"]
+    df_1_5T = df_1_5T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
+    patient_id, date, image_id = list(df_1_5T.groups.keys())[index][0], list(df_1_5T.groups.keys())[index][1], list(df_1_5T.groups.keys())[index][2]
+    paths_1_5T = df_1_5T.get_group((patient_id, date, image_id))["File Path"].tolist()
+    print(f"Patient ID: {patient_id}, Date: {date}, Image ID: {image_id}")
+
+    df_3T = df[df["Description"] == "Double_TSE"]
+    df_3T = df_3T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
+    _, _, image_id = list(df_3T.groups.keys())[index][0], list(df_3T.groups.keys())[index][1], list(df_3T.groups.keys())[index][2]
+    paths_3T = df_3T.get_group((patient_id, date, image_id))["File Path"].tolist()
+    print(f"Patient ID: {patient_id}, Date: {date}, Image ID: {image_id}")
+    return paths_1_5T, paths_3T

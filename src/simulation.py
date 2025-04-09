@@ -97,14 +97,14 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30):
     return kspace * mask
 
 def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20, invert=False):
-    x = np.linspace(0, 1, kspace.shape[axis])
-    y = np.linspace(0, 1, kspace.shape[(axis + 1) % 3])
-    z = np.linspace(0, 1, kspace.shape[(axis + 2) % 3])
-    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+    x = jnp.linspace(0, 1, kspace.shape[axis])
+    y = jnp.linspace(0, 1, kspace.shape[(axis + 1) % 3])
+    z = jnp.linspace(0, 1, kspace.shape[(axis + 2) % 3])
+    X, Y, Z = jnp.meshgrid(x, y, z, indexing='ij')
 
-    gaussian = A * np.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
+    gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
     if invert:
-        gaussian = np.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
+        gaussian = jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
     return kspace * gaussian
 
 def random_noise(image, intensity=0.1, frequency=0.1):
