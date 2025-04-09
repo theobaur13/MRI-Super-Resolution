@@ -13,7 +13,7 @@ def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-def read_dicom(files):
+def read_dicom(files, flip=False):
     slices = []
     files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
     for file in tqdm(files):
@@ -22,6 +22,10 @@ def read_dicom(files):
             slices.append(img.pixel_array)
 
     image = jnp.stack(slices, axis=0)
+
+    if flip:
+        image = jnp.flip(image, axis=0)
+
     normalized_image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image))
     return normalized_image
 
