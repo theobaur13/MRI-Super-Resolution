@@ -15,7 +15,7 @@ def read_nifti(file_path):
 def read_dicom(files, flip=False):
     slices = []
     files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
-    for file in tqdm(files):
+    for file in files:
         if file.endswith(".dcm"):
             img = pydicom.dcmread(file)
             slices.append(img.pixel_array)

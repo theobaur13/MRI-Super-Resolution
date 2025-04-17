@@ -1,33 +1,33 @@
 import os
 import sys
+import argparse
 from src.utils import *
 from src.simulation import *
 from src.data_routing import *
+from src.analysis import *
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(base_dir, "data")
+    ADNI_dir = os.path.join(data_path, "ADNI")
+    ADNI_collapsed_dir = os.path.join(data_path, "ADNI_collapsed")
 
-    # Command line arguments for dataset type
-    if len(sys.argv) < 2:
-        print("Usage: python main.py [action]")
-        print("action: 'organise-adni' or 'simulate' or 'batch-convert'")
-        sys.exit(1)
-    action = sys.argv[1].lower()
+    # Command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("action", choices=["organise-adni", "simulate", "analyse", "batch-convert"], help="Action to perform")
+    parser.add_argument("--index", type=int, help="Index of ADNI image to simulate")
+    parser.add_argument("--limit", type=int, default=5, help="Number of images to process")
+    parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
+    parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    args = parser.parse_args()
+    action = args.action.lower()
 
     if action == "organise-adni":
-        ADNI_dir = os.path.join(data_path, "ADNI")
-        new_dir = os.path.join(data_path, "ADNI_collapsed")
-        collapse_adni(ADNI_dir, new_dir)
+        collapse_adni(ADNI_dir, ADNI_collapsed_dir)
 
     elif action == "simulate":
-        if len(sys.argv) < 3:
-            print("Usage: python main.py simulate [index]")
-            sys.exit(1)
-
-        index = int(sys.argv[2].lower())
-        dir = os.path.join(data_path, "ADNI_collapsed")
-        df = adni_dataframe(dir)
+        index = args.index
+        df = adni_dataframe(ADNI_collapsed_dir)
         paths_1_5T, paths_3T = get_adni_pair(df, index)
         
         image_T1_5 = read_dicom(paths_1_5T)
@@ -51,6 +51,31 @@ if __name__ == "__main__":
         display_comparison(image_T1_5, image_T3, slice=slice_idx, axis=axis, kspace=False)
         display_comparison(image_T1_5, simulated_image, slice=slice_idx, axis=axis, kspace=False)
         plot_3d_kspace([T1_5_kspace, T3_kspace, simulated_kspace], slice_idx, axis=axis, cmap="viridis", limit=max_value)
+        plt.show()
+
+    # Analyse central brightness of the images
+    elif action == "analyse":
+        df = adni_dataframe(ADNI_collapsed_dir)
+        slice_idx = args.slice
+        axis = args.axis
+        limit = args.limit
+
+        # Get the paths for the 1.5T and 3T images
+        scans_1_5T = []
+        scans_3T = []
+        for i in tqdm(range(limit)):
+            paths_1_5T, paths_3T = get_adni_pair(df, i)
+            image_1_5T = read_dicom(paths_1_5T)
+            image_1_5T = image_1_5T[0:48, 0:256, 0:256]
+
+            image_3T = read_dicom(paths_3T, flip=True)
+            image_3T = image_3T[0:48, 0:256, 0:256]
+
+            scans_1_5T.append(image_1_5T)
+            scans_3T.append(image_3T)
+
+        smoothing_factor = 5
+        generate_brightness_mask(scans_1_5T, scans_3T, slice_idx, axis=axis, sigma=smoothing_factor)
         plt.show()
 
     elif action == "batch-convert":
