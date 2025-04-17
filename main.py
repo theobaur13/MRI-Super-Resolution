@@ -61,8 +61,8 @@ if __name__ == "__main__":
         limit = args.limit
 
         # Get the paths for the 1.5T and 3T images
-        scans_1_5T = []
-        scans_3T = []
+        scans_1_5T = np.zeros((limit, 48, 256, 256))
+        scans_3T = np.zeros((limit, 48, 256, 256))
         for i in tqdm(range(limit)):
             paths_1_5T, paths_3T = get_adni_pair(df, i)
             image_1_5T = read_dicom(paths_1_5T)
@@ -71,11 +71,11 @@ if __name__ == "__main__":
             image_3T = read_dicom(paths_3T, flip=True)
             image_3T = image_3T[0:48, 0:256, 0:256]
 
-            scans_1_5T.append(image_1_5T)
-            scans_3T.append(image_3T)
+            scans_1_5T[i] = image_1_5T
+            scans_3T[i] = image_3T
 
-        smoothing_factor = 5
-        generate_brightness_mask(scans_1_5T, scans_3T, slice_idx, axis=axis, sigma=smoothing_factor)
+        generate_brightness_mask(scans_1_5T, scans_3T, slice_idx, axis=axis, sigma=5)
+        compare_snr(scans_1_5T, scans_3T, axis)
         plt.show()
 
     elif action == "batch-convert":
