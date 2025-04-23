@@ -274,7 +274,6 @@ def gibbs_removal(vol, slice_axis=2, n_points=3):
            removal based on local subvoxel-shifts. Magn Reson Med. 2016
            doi: 10.1002/mrm.26054.
     """
-    jax_to_numpy(vol)
     nd = vol.ndim
 
     # check the axis corresponding to different slices
@@ -316,4 +315,4 @@ def gibbs_removal(vol, slice_axis=2, n_points=3):
     if slice_axis < 2 and nd > 2:
         vol = np.swapaxes(vol, slice_axis, 2)
 
-    return numpy_to_jax(vol)
+    return vol

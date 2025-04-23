@@ -8,11 +8,17 @@ from src.sampling import *
 from src.utils import *
 from src.kspace import *
 from src.display import *
+from src.gibbs_removal import *
 
 def generate_simulated_image(kspace, axis):
     simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
     simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
     simulated_image = convert_to_image(simulated_kspace)
+
+    simulated_image = jax_to_numpy(simulated_image)
+    simulated_image = gibbs_removal(simulated_image, slice_axis=axis)
+    simulated_image = numpy_to_jax(simulated_image)
+    
     simulated_image = gaussian_plane(simulated_image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
     simulated_image = random_noise(simulated_image, intensity=0.01, frequency=0.3)
     return simulated_image, simulated_kspace
@@ -26,6 +32,7 @@ if __name__ == "__main__":
     # Command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["organise-adni", "simulate", "analyse", "batch-convert"], help="Action to perform")
+    parser.add_argument("--subject", type=str, help="Subject for analysis (e.g., 'noise', 'brightness')")
     parser.add_argument("--index", type=int, help="Index of ADNI image to simulate")
     parser.add_argument("--limit", type=int, default=5, help="Number of images to process")
     parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
@@ -39,46 +46,44 @@ if __name__ == "__main__":
         collapse_adni(ADNI_dir, ADNI_collapsed_dir)
 
     # Apply degradation to ADNI scans
-    # > py main.py simulate --index 0
+    # > py main.py simulate --index 0 --axis 0 --slice 24
     elif action == "simulate":
         index = args.index
+        axis = args.axis
+        slice_idx = args.slice
+
         df = adni_dataframe(ADNI_collapsed_dir)
         paths_1_5T, paths_3T = get_adni_pair(df, index)
         
-        image_T1_5 = read_dicom(paths_1_5T)
+        image_1_5T = read_dicom(paths_1_5T)
+        image_3T = read_dicom(paths_3T, flip=True)
+        image_3T = image_3T[0:48, 0:256, 0:256]
 
-        image_T3 = read_dicom(paths_3T, flip=True)
-        image_T3 = image_T3[0:48, 0:256, 0:256]
-
-        T1_5_kspace = convert_to_kspace(image_T1_5)
-        T3_kspace = convert_to_kspace(image_T3)
-        simulated_image, simulated_kspace = generate_simulated_image(T3_kspace, axis=0)
-
-        axis = 0
-        slice_idx = 24
+        kspace_1_5T = convert_to_kspace(image_1_5T)
+        kspace_3T = convert_to_kspace(image_3T)
+        simulated_image, simulated_kspace = generate_simulated_image(kspace_3T, axis=0)
 
         max_value = max(
-            robust_max(T1_5_kspace, axis, slice_idx),
-            robust_max(T3_kspace, axis, slice_idx),
+            robust_max(kspace_1_5T, axis, slice_idx),
+            robust_max(kspace_3T, axis, slice_idx),
             robust_max(simulated_kspace, axis, slice_idx)
         ) * slice_idx * 10
 
-        display_comparison(image_T1_5, image_T3, slice=slice_idx, axis=axis, kspace=False)
-        display_comparison(image_T1_5, simulated_image, slice=slice_idx, axis=axis, kspace=False)
-        plot_3d_kspace([T1_5_kspace, T3_kspace, simulated_kspace], slice_idx, axis=axis, cmap="viridis", limit=max_value)
+        display_comparison(image_1_5T, image_3T, slice=slice_idx, axis=axis, kspace=False)
+        display_comparison(image_1_5T, simulated_image, slice=slice_idx, axis=axis, kspace=False)
+        plot_3d_surfaces([kspace_1_5T, kspace_3T, simulated_kspace], slice_idx, axis=axis, cmap="viridis", limit=max_value)
         plt.show()
 
     # Analyse central brightness of ADNI scans
-    # > py main.py analyse --slice 24 --axis 0 --limit 5
     elif action == "analyse":
         df = adni_dataframe(ADNI_collapsed_dir)
-        slice_idx = args.slice
+        subject = args.subject
         axis = args.axis
         limit = args.limit
 
-        # Get the paths for the 1.5T and 3T images
-        scans_1_5T = np.zeros((limit, 48, 256, 256))
-        scans_3T = np.zeros((limit, 48, 256, 256))
+        # Read ADNI scans
+        hypervolume_1_5T = np.zeros((limit, 48, 256, 256))
+        hypervolume_3T = np.zeros((limit, 48, 256, 256))
         for i in tqdm(range(limit)):
             paths_1_5T, paths_3T = get_adni_pair(df, i)
             image_1_5T = read_dicom(paths_1_5T)
@@ -87,11 +92,33 @@ if __name__ == "__main__":
             image_3T = read_dicom(paths_3T, flip=True)
             image_3T = image_3T[0:48, 0:256, 0:256]
 
-            scans_1_5T[i] = image_1_5T
-            scans_3T[i] = image_3T
+            hypervolume_1_5T[i] = image_1_5T
+            hypervolume_3T[i] = image_3T
 
-        generate_brightness_mask(scans_1_5T, scans_3T, slice_idx, axis=axis, sigma=5)
-        compare_snr(scans_1_5T, scans_3T, axis)
+        # > py main.py analyse --subject "noise" --axis 0 --limit 5
+        if subject == "noise":
+            compare_snr(hypervolume_1_5T, hypervolume_3T, axis)
+
+        # > py main.py analyse --subject "brightness" --slice 24 --axis 0 --limit 5
+        elif subject == "brightness":
+            slice_idx = args.slice
+            generate_brightness_mask(hypervolume_1_5T, hypervolume_3T, slice_idx, axis=axis, sigma=5)
+
+        # > py main.py analyse --subject "gibbs" --index 0 --slice 24 --axis 0 --limit 5
+        elif subject == "gibbs":
+            index = args.index
+            slice_idx = args.slice
+
+            original_volume = hypervolume_3T[index, :, :, :]
+            kspace = convert_to_kspace(original_volume)
+            kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
+            kspace = gaussian_plane(kspace, axis=0, sigma=0.5, mu=0.5, A=2)
+            simulated_volume = convert_to_image(kspace)
+            reduced_volume = gibbs_removal(jax_to_numpy(simulated_volume), slice_axis=axis)
+
+            display_comparison(original_volume, reduced_volume, slice=slice_idx, axis=axis, kspace=False)
+            display_comparison(simulated_volume, reduced_volume, slice=slice_idx, axis=axis, kspace=False)
+
         plt.show()
 
     # Apply degradation to BraTS scans

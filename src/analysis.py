@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 from src.display import plot_surface
 from tqdm import tqdm
 
-def generate_brightness_mask(set_1, set_2, slice_idx, axis=0, sigma=5):
+# Function to generate and display a brightness mask for a given slice in two hypervolumes
+def generate_brightness_mask(hypervolume_1, hypervolume_2, slice_idx, axis=0, sigma=5):
     # Calculate mean intensity for each slice in the sets
-    intensity_cube_1 = np.mean(set_1, axis=axis)
-    intensity_cube_2 = np.mean(set_2, axis=axis)
+    intensity_volume_1 = np.mean(hypervolume_1, axis=axis)
+    intensity_volume_2 = np.mean(hypervolume_2, axis=axis)
 
     # Calculate the conversion mask
-    conversion_mask = intensity_cube_1 / intensity_cube_2
+    conversion_mask = intensity_volume_1 / intensity_volume_2
     conversion_mask = np.clip(conversion_mask, 0, 1)  # Clip values to [0, 1] range
     # conversion_mask = smooth(conversion_mask, sigma)  # Smooth the mask
     conversion_mask = ndimage.gaussian_filter(conversion_mask, sigma=sigma)  # Smooth the mask
@@ -20,8 +21,9 @@ def generate_brightness_mask(set_1, set_2, slice_idx, axis=0, sigma=5):
     ax2 = fig.add_subplot(1, 3, 2, projection='3d')
     ax3 = fig.add_subplot(1, 3, 3, projection='3d')
 
-    plot_surface(ax1, intensity_cube_1, slice_idx, axis=axis, cmap="plasma", limit=0)
-    plot_surface(ax2, intensity_cube_2, slice_idx, axis=axis, cmap="plasma", limit=0)
+    lim = 0.6
+    plot_surface(ax1, intensity_volume_1, slice_idx, axis=axis, cmap="plasma", limit=lim)
+    plot_surface(ax2, intensity_volume_2, slice_idx, axis=axis, cmap="plasma", limit=lim)
     plot_surface(ax3, conversion_mask, slice_idx, axis=axis, cmap="inferno", limit=0)
     
     ax1.set_title("Mean Intensity Image 1")
@@ -29,37 +31,38 @@ def generate_brightness_mask(set_1, set_2, slice_idx, axis=0, sigma=5):
     ax3.set_title("Conversion Mask")
     return conversion_mask
 
-def compare_snr(scans_1_5T, scans_3T, axis=0, x=30):
+# Function to calculate and compare the Signal-to-Noise Ratio (SNR) for two hypervolumes
+def compare_snr(hypervolume_1_5T, hypervolume_3T, axis=0, x=30):
     if axis == 0:
-        noise_1_5T = scans_1_5T[:, :, 15:x+15, 15:x+15]
-        noise_3T = scans_3T[:, :, 15:x+15, 15:x+15]
+        noise_1_5T = hypervolume_1_5T[:, :, 15:x+15, 15:x+15]
+        noise_3T = hypervolume_3T[:, :, 15:x+15, 15:x+15]
     elif axis == 1:
-        noise_1_5T = scans_1_5T[:, 0:x, :, 0:x]
-        noise_3T = scans_3T[:, 0:x, :, 0:x]
+        noise_1_5T = hypervolume_1_5T[:, 0:x, :, 0:x]
+        noise_3T = hypervolume_3T[:, 0:x, :, 0:x]
     elif axis == 2:
-        noise_1_5T = scans_1_5T[:, 0:x, 0:x, :]
-        noise_3T = scans_3T[:, 0:x, 0:x, :]
+        noise_1_5T = hypervolume_1_5T[:, 0:x, 0:x, :]
+        noise_3T = hypervolume_3T[:, 0:x, 0:x, :]
 
-    snr_1_5T = np.zeros((scans_1_5T.shape[0], scans_1_5T.shape[axis + 1]))
-    snr_3T = np.zeros((scans_1_5T.shape[0], scans_3T.shape[axis + 1]))
+    snr_1_5T = np.zeros((hypervolume_1_5T.shape[0], hypervolume_1_5T.shape[axis + 1]))
+    snr_3T = np.zeros((hypervolume_1_5T.shape[0], hypervolume_3T.shape[axis + 1]))
 
-    for i in tqdm(range(scans_1_5T.shape[0])):
-        for j in range(scans_1_5T.shape[axis + 1]):
+    for i in tqdm(range(hypervolume_1_5T.shape[0])):
+        for j in range(hypervolume_1_5T.shape[axis + 1]):
             if axis == 0:
-                slice_1_5T = scans_1_5T[i, j, :, :]
-                slice_3T = scans_3T[i, j, :, :]
+                slice_1_5T = hypervolume_1_5T[i, j, :, :]
+                slice_3T = hypervolume_3T[i, j, :, :]
                 noise_1_5T_slice = noise_1_5T[i, j, :, :]
                 noise_3T_slice = noise_3T[i, j, :, :]
                 
             elif axis == 1:
-                slice_1_5T = scans_1_5T[i, :, j, :]
-                slice_3T = scans_3T[i, :, j, :]
+                slice_1_5T = hypervolume_1_5T[i, :, j, :]
+                slice_3T = hypervolume_3T[i, :, j, :]
                 noise_1_5T_slice = noise_1_5T[i, :, j, :]
                 noise_3T_slice = noise_3T[i, :, j, :]
 
             elif axis == 2:
-                slice_1_5T = scans_1_5T[i, :, :, j]
-                slice_3T = scans_3T[i, :, :, j]
+                slice_1_5T = hypervolume_1_5T[i, :, :, j]
+                slice_3T = hypervolume_3T[i, :, :, j]
                 noise_1_5T_slice = noise_1_5T[i, :, :, j]
                 noise_3T_slice = noise_3T[i, :, :, j]
 
@@ -84,3 +87,16 @@ def compare_snr(scans_1_5T, scans_3T, axis=0, x=30):
     ax.set_ylabel('SNR')
     ax.set_title('Mean Slice-Wise SNR')
     ax.legend()
+
+def compare_gibbs_ringing(volume_1, volume_2, slice_idx, axis=0):
+    if axis == 0:
+        slice_1 = volume_1[slice_idx, :, :]
+        slice_2 = volume_2[slice_idx, :, :]
+    elif axis == 1:
+        slice_1 = volume_1[:, slice_idx, :]
+        slice_2 = volume_2[:, slice_idx, :]
+    elif axis == 2:
+        slice_1 = volume_1[:, :, slice_idx]
+        slice_2 = volume_2[:, :, slice_idx]
+
+    pass
