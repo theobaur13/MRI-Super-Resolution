@@ -4,22 +4,16 @@ import matplotlib.pyplot as plt
 from src.display import plot_surface
 from tqdm import tqdm
 
-def smooth_image(image, sigma=5):
-    return ndimage.gaussian_filter(image, sigma=sigma)
-
-def find_mean_intesity(set, axis=0):
-    # Calculate mean intensity of the specified slice across all images in the set
-    return np.mean(set, axis=axis)
-
 def generate_brightness_mask(set_1, set_2, slice_idx, axis=0, sigma=5):
     # Calculate mean intensity for each slice in the sets
-    intensity_cube_1 = find_mean_intesity(set_1, axis)
-    intensity_cube_2 = find_mean_intesity(set_2, axis)
+    intensity_cube_1 = np.mean(set_1, axis=axis)
+    intensity_cube_2 = np.mean(set_2, axis=axis)
 
     # Calculate the conversion mask
     conversion_mask = intensity_cube_1 / intensity_cube_2
     conversion_mask = np.clip(conversion_mask, 0, 1)  # Clip values to [0, 1] range
-    conversion_mask = smooth_image(conversion_mask, sigma)  # Smooth the mask
+    # conversion_mask = smooth(conversion_mask, sigma)  # Smooth the mask
+    conversion_mask = ndimage.gaussian_filter(conversion_mask, sigma=sigma)  # Smooth the mask
 
     fig = plt.figure(figsize=(15, 10))
     ax1 = fig.add_subplot(1, 3, 1, projection='3d')

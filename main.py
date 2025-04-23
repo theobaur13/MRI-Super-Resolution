@@ -1,10 +1,21 @@
 import os
-import sys
 import argparse
-from src.utils import *
-from src.simulation import *
-from src.data_routing import *
+from src.readwrite import *
+from src.paths import *
 from src.analysis import *
+from src.adni import *
+from src.sampling import *
+from src.utils import *
+from src.kspace import *
+from src.display import *
+
+def generate_simulated_image(kspace, axis):
+    simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
+    simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
+    simulated_image = convert_to_image(simulated_kspace)
+    simulated_image = gaussian_plane(simulated_image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
+    simulated_image = random_noise(simulated_image, intensity=0.01, frequency=0.3)
+    return simulated_image, simulated_kspace
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,9 +33,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     action = args.action.lower()
 
+    # Construct ADNI directory if it doesn't exist
+    # > py main.py organise-adni
     if action == "organise-adni":
         collapse_adni(ADNI_dir, ADNI_collapsed_dir)
 
+    # Apply degradation to ADNI scans
+    # > py main.py simulate --index 0
     elif action == "simulate":
         index = args.index
         df = adni_dataframe(ADNI_collapsed_dir)
@@ -53,7 +68,8 @@ if __name__ == "__main__":
         plot_3d_kspace([T1_5_kspace, T3_kspace, simulated_kspace], slice_idx, axis=axis, cmap="viridis", limit=max_value)
         plt.show()
 
-    # Analyse central brightness of the images
+    # Analyse central brightness of ADNI scans
+    # > py main.py analyse --slice 24 --axis 0 --limit 5
     elif action == "analyse":
         df = adni_dataframe(ADNI_collapsed_dir)
         slice_idx = args.slice
@@ -78,6 +94,7 @@ if __name__ == "__main__":
         compare_snr(scans_1_5T, scans_3T, axis)
         plt.show()
 
+    # Apply degradation to BraTS scans
     elif action == "batch-convert":
         seq = "t2f"                                 # t1c, t1n, t2f, t2w
         dataset = "BraSyn"                             # BraSyn, GLI

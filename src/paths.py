@@ -1,6 +1,5 @@
 import os
 from tqdm import tqdm
-import shutil
 
 def get_brats_paths(data_dir, seq, dataset):
     train_dir = os.path.join(data_dir, dataset, "train")
@@ -33,24 +32,3 @@ def get_adni_paths(data_dir, limit=10):
     t1_5 = t1_5[:limit]
     t3 = t3[:limit]
     return t1_5, t3
-
-def collapse_adni(adni_dir, output_dir):
-    t1_5_paths, t3_paths = get_adni_paths(adni_dir, limit=100000)
-    paths = t1_5_paths + t3_paths
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    for dir in tqdm(paths):
-        contents = os.listdir(dir)
-        timestamp = dir.split("\\")[-2]
-        timestamp = timestamp.replace(".0", "")
-        timestamp = timestamp.replace("_", "")
-        timestamp = timestamp.replace("-", "")
-
-        for file in contents:
-            if file.endswith(".dcm"):
-                old_name = file
-                parts = old_name.split("_")
-                parts[-4] = timestamp
-                new_name = "_".join(parts)
-                shutil.copy(os.path.join(dir, file), os.path.join(output_dir, new_name))
