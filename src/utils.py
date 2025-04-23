@@ -1,5 +1,20 @@
 import torch
 import jax.numpy as jnp
+import numpy as np
+
+def jax_to_numpy(x):
+    """Convert a JAX array to a NumPy array."""
+    if isinstance(x, jnp.ndarray):
+        return np.array(x)
+    else:
+        raise TypeError("Input must be a JAX array.")
+
+def numpy_to_jax(x):
+    """Convert a NumPy array to a JAX array."""
+    if isinstance(x, np.ndarray):
+        return jnp.array(x)
+    else:
+        raise TypeError("Input must be a NumPy array.")
 
 def convert_to_tensor(image_list, slice_axis):
     real_slices = []
