@@ -10,6 +10,10 @@ def read_nifti(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
+def write_nifti(image, file_path):
+    img = nib.Nifti1Image(image, affine=None)
+    nib.save(img, file_path)
+
 def read_dicom(files, flip=False):
     slices = []
     files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number

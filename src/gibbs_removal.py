@@ -19,7 +19,6 @@
 
 import numpy as np
 from tqdm import tqdm
-from src.utils import jax_to_numpy, numpy_to_jax
 
 def _image_tv(x, axis=0, n_points=3):
     """ Computes total variation (TV) of matrix x accross a given axis and

@@ -15,9 +15,9 @@ def generate_simulated_image(kspace, axis):
     simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
     simulated_image = convert_to_image(simulated_kspace)
 
-    simulated_image = jax_to_numpy(simulated_image)
-    simulated_image = gibbs_removal(simulated_image, slice_axis=axis)
-    simulated_image = numpy_to_jax(simulated_image)
+    # simulated_image = jax_to_numpy(simulated_image)
+    # simulated_image = gibbs_removal(simulated_image, slice_axis=axis)
+    # simulated_image = numpy_to_jax(simulated_image)
     
     simulated_image = gaussian_plane(simulated_image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
     simulated_image = random_noise(simulated_image, intensity=0.01, frequency=0.3)
@@ -37,6 +37,10 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=5, help="Number of images to process")
     parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
     parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    parser.add_argument("--brats_dir", type=str, help="Name of the BraTS directory")
+    parser.add_argument("--seq", type=str, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
+    parser.add_argument("--dataset", type=str, help="Dataset type (e.g., 'BraSyn', 'GLI')")
+    parser.add_argument("--output_dir", type=str, help="Name of the output directory")
     args = parser.parse_args()
     action = args.action.lower()
 
@@ -122,17 +126,18 @@ if __name__ == "__main__":
         plt.show()
 
     # Apply degradation to BraTS scans
+    # > py main.py batch-convert --brats_dir "data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000" --seq "t2f" --dataset "BraSyn" --output_dir "BraTS_output"
     elif action == "batch-convert":
-        seq = "t2f"                                 # t1c, t1n, t2f, t2w
-        dataset = "BraSyn"                             # BraSyn, GLI
+        seq = args.seq                  # t1c, t1n, t2f, t2w
+        dataset = args.dataset          # BraSyn, GLI
+        brats_dir = args.brats_dir      # data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000
+        output_dir = args.output_dir    # BraTS_output
+        
+        brats_path = os.path.join(data_path, brats_dir)
+        output_path = os.path.join(data_path, output_dir)
+        os.makedirs(output_path, exist_ok=True)
 
-        data_path = os.path.join(data_path, "data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000")
-        paths, validate_paths = get_brats_paths(data_path, seq, dataset)
-
-        real_images = []
-        real_kspaces = []
-        simulated_kspaces = []
-        simulated_images = []
+        paths, validate_paths = get_brats_paths(brats_path, seq, dataset)
 
         axis = 0
         for path in tqdm(paths):
@@ -140,7 +145,4 @@ if __name__ == "__main__":
             kspace = convert_to_kspace(image)
             simulated_image, simulated_kspace = generate_simulated_image(kspace, axis=axis)
 
-            real_images.append(image)
-            real_kspaces.append(kspace)
-            simulated_kspaces.append(simulated_kspace)
-            simulated_images.append(simulated_image)
+            write_nifti(simulated_image, os.path.join(output_path, os.path.basename(path)))
