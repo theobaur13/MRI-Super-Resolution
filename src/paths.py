@@ -1,12 +1,14 @@
 import os
 from tqdm import tqdm
 
-def get_brats_paths(data_dir, seq, dataset):
-    train_dir = os.path.join(data_dir, dataset, "train")
-    validate_dir = os.path.join(data_dir, dataset, "validate")
+def get_brats_paths(data_dir, seq, dataset=None):
+    datasets = [dataset] if dataset else ["BraSyn", "GLI"]
+    train_paths, validate_paths = [], []
 
-    train_paths = [os.path.join(train_dir, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(train_dir)]
-    validate_paths = [os.path.join(validate_dir, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(validate_dir)]
+    for dset in datasets:
+        for split, paths in [("train", train_paths), ("validate", validate_paths)]:
+            dir_path = os.path.join(data_dir, dset, split)
+            paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
 
     return train_paths, validate_paths
 
