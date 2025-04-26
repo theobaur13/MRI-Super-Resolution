@@ -5,10 +5,16 @@ import jax.numpy as jnp
 import pydicom
 from tqdm import tqdm
 from src.paths import get_adni_paths
+import numpy as np
 
-def read_nifti(file_path):
+def read_nifti(file_path, brats=False):
     img = nib.load(file_path)
-    return img.get_fdata()
+    data = np.asanyarray(img.dataobj)
+    if brats:
+        # In BraTS Axis 0: Sagittal, Axis 1: Coronal, Axis 2: Axial
+        # Convert Axis 0: Axial, Axis 1: Sagittal, Axis 2: Coronal
+        data = np.transpose(data, (2, 0, 1))
+    return data
 
 def write_nifti(image, file_path):
     img = nib.Nifti1Image(image, affine=None)
