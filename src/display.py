@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
 
-def plot_slice(ax, volume, slice=65, cmap='gray', axis="z"):
+def plot_slice(ax, volume, slice=65, cmap='gray', axis=0):
     # set NaN values to red on colormap
     cmap = plt.cm.gray
     cmap.set_bad(color='red')
@@ -15,7 +15,7 @@ def plot_slice(ax, volume, slice=65, cmap='gray', axis="z"):
     elif axis == 2:
         volume = volume[:, :, slice]
         
-    ax.imshow(volume, cmap=cmap)
+    ax.imshow(jnp.abs(volume), cmap=cmap)
     # ax.axis('off')
 
 def display_comparison(volume_1, volume_2, slice=24, axis=0, kspace=True):
