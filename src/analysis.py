@@ -5,7 +5,7 @@ from src.display import plot_surface
 from tqdm import tqdm
 
 # Function to generate and display a brightness mask for a given slice in two hypervolumes
-def generate_brightness_mask(hypervolume_1, hypervolume_2, slice_idx, axis=0, sigma=5):
+def generate_brightness_mask(hypervolume_1, hypervolume_2, slice_idx, axis=0, sigma=5, lim=0):
     # Calculate mean intensity for each slice in the sets
     intensity_volume_1 = np.mean(hypervolume_1, axis=axis)
     intensity_volume_2 = np.mean(hypervolume_2, axis=axis)
@@ -21,7 +21,7 @@ def generate_brightness_mask(hypervolume_1, hypervolume_2, slice_idx, axis=0, si
     ax2 = fig.add_subplot(1, 3, 2, projection='3d')
     ax3 = fig.add_subplot(1, 3, 3, projection='3d')
 
-    lim = 0.6
+    # lim = 0.6
     plot_surface(ax1, intensity_volume_1, slice_idx, axis=axis, cmap="plasma", limit=lim)
     plot_surface(ax2, intensity_volume_2, slice_idx, axis=axis, cmap="plasma", limit=lim)
     plot_surface(ax3, conversion_mask, slice_idx, axis=axis, cmap="inferno", limit=0)
