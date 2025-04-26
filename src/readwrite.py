@@ -9,12 +9,14 @@ import numpy as np
 
 def read_nifti(file_path, brats=False):
     img = nib.load(file_path)
-    data = np.asanyarray(img.dataobj)
+    image = np.asanyarray(img.dataobj)
     if brats:
         # In BraTS Axis 0: Sagittal, Axis 1: Coronal, Axis 2: Axial
         # Convert Axis 0: Axial, Axis 1: Sagittal, Axis 2: Coronal
-        data = np.transpose(data, (2, 0, 1))
-    return data
+        image = np.transpose(image, (2, 0, 1))
+
+    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    return normalized_image
 
 def write_nifti(image, file_path):
     img = nib.Nifti1Image(image, affine=None)
