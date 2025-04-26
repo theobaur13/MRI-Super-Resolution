@@ -66,3 +66,8 @@ def adni_search(input_path, output_path):
 
     with open(output_path, 'w') as f:
         f.write(image_ids_str)
+
+def adni_search_by_id(df, image_id):
+    # Return the paths of the images with the given image_id
+    paths = df[df['Image ID'] == image_id]['File Path'].tolist()
+    return paths
