@@ -10,10 +10,20 @@ from src.utils import *
 from src.kspace import *
 from src.display import *
 from src.gibbs_removal import *
+from jax.lib import xla_bridge
 
 # Axis 0: Axial, Axis 1: Sagittal, Axis 2: Coronal
 
-def generate_simulated_image(kspace, axis):
+# Preprocessing pipeline to normalise ADNI and BraTS scans
+def preprocessing_pipeline(volume):
+    # 1: Reorient scans to a common orientation
+    # 2: Resample to a common voxel spacing
+    # 3: Crop to a common size (bounding box)
+    # 4: Upscale or downscale to a common size (e.g., 256x256x256)
+    pass
+
+# Degrade 3T scans to resemble 1.5T scans
+def simluation_pipeline(kspace, axis):
     simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
     simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
     simulated_image = convert_to_image(simulated_kspace)
@@ -27,6 +37,8 @@ def generate_simulated_image(kspace, axis):
     return simulated_image, simulated_kspace
 
 if __name__ == "__main__":
+    print("JAX backend:", xla_bridge.get_backend().platform)
+
     # Set up directories
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(base_dir, "data")
@@ -75,12 +87,12 @@ if __name__ == "__main__":
         paths_1_5T, paths_3T = get_adni_pair(df, index)
         
         image_1_5T = read_dicom(paths_1_5T)
-        image_3T = read_dicom(paths_3T, flip=True)
+        image_3T = read_dicom(paths_3T)
         image_3T = image_3T[0:48, 0:256, 0:256]
 
         kspace_1_5T = convert_to_kspace(image_1_5T)
         kspace_3T = convert_to_kspace(image_3T)
-        simulated_image, simulated_kspace = generate_simulated_image(kspace_3T, axis=0)
+        simulated_image, simulated_kspace = simluation_pipeline(kspace_3T, axis=0)
 
         max_value = max(
             robust_max(kspace_1_5T, axis, slice_idx),
@@ -119,7 +131,7 @@ if __name__ == "__main__":
             if datset == "adni":
                 paths_1_5T, paths_3T = get_adni_pair(df, i)
                 image_1_5T = read_dicom(paths_1_5T)
-                image_3T = read_dicom(paths_3T, flip=True)
+                image_3T = read_dicom(paths_3T)
 
                 image_1_5T = image_1_5T[0:48, 0:256, 0:256]
                 image_3T = image_3T[0:48, 0:256, 0:256]
@@ -175,7 +187,7 @@ if __name__ == "__main__":
         for path in tqdm(paths):
             image = read_nifti(path)
             kspace = convert_to_kspace(image)
-            simulated_image, simulated_kspace = generate_simulated_image(kspace, axis=axis)
+            simulated_image, simulated_kspace = simluation_pipeline(kspace, axis=axis)
 
             write_nifti(simulated_image, os.path.join(brats_output_dir, os.path.basename(path)))
 
@@ -191,11 +203,11 @@ if __name__ == "__main__":
             df = adni_dataframe(ADNI_collapsed_dir)
             image_id = relative_path.split("/")[-1].split("_")[-1].split(".")[0]
             paths = adni_search_by_id(df, image_id)
-            image = read_dicom(paths, flip=True)
+            image = read_dicom(paths)
             
         elif scan_type == "nifti":
             absolute_path = os.path.join(data_path, relative_path)
-            image = read_nifti(absolute_path, brats=True)
+            image = read_nifti(absolute_path)
 
         fig, ax = plt.subplots(1, 1, figsize=(9, 4))
         plot_slice(ax, image, slice=args.slice, axis=args.axis)

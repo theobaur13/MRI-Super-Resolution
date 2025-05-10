@@ -1,9 +1,10 @@
-import numpy as np
 import jax.numpy as jnp
+from jax import random
 
 def random_undersampling(kspace, factor=1.2, seed=42):
-    np.random.seed(seed)
-    mask = np.random.choice([0, 1], size=kspace.shape, p=[1 - 1 / factor, 1 / factor])
+    key = random.PRNGKey(seed)
+    prob = 1 / factor
+    mask = random.bernoulli(key, p=prob, shape=kspace.shape)
     return kspace * mask
 
 def cartesian_undersampling(kspace, axis, factor=3):
@@ -33,7 +34,9 @@ def radial_undersampling(kspace, axis, factor=0.5):
 
     return kspace * mask
 
-def variable_density_undersampling(kspace, factor=1.1, ks=30):
+def variable_density_undersampling(kspace, factor=1.1, ks=30, seed=42):
+    key = random.PRNGKey(seed)
+
     # Chance of sampling a line is inversely proportional to its distance from the center
     center = jnp.array(kspace.shape) // 2
     Z, Y, X = jnp.indices(kspace.shape)
@@ -49,6 +52,6 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30):
     probabilities = 1 - distances
     probabilities = probabilities / factor
     probabilities = jnp.clip(probabilities, 0, 1)
-    mask = (np.random.rand(*kspace.shape) < probabilities).astype(int)
+    mask = random.bernoulli(key, p=probabilities).astype(kspace.dtype)
 
     return kspace * mask

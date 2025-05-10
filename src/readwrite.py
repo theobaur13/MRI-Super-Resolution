@@ -4,25 +4,26 @@ import nibabel as nib
 import jax.numpy as jnp
 import pydicom
 from tqdm import tqdm
+import SimpleITK as sitk
 from src.paths import get_adni_paths
-import numpy as np
 
 def read_nifti(file_path, brats=False):
     img = nib.load(file_path)
-    image = np.asanyarray(img.dataobj)
+    img = nib.as_closest_canonical(img)
+    image = jnp.array(img.get_fdata())  # Use get_fdata() for float64 and better precision
+    
     if brats:
-        # In BraTS Axis 0: Sagittal, Axis 1: Coronal, Axis 2: Axial
-        # Convert Axis 0: Axial, Axis 1: Sagittal, Axis 2: Coronal
-        image = np.transpose(image, (2, 0, 1))
+        # Convert from BraTS to Axial-Sagittal-Coronal
+        image = jnp.transpose(image, (2, 0, 1))
 
-    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
-    return normalized_image
+    image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image) + 1e-8)  # Added epsilon to avoid division by zero
+    return image
 
 def write_nifti(image, file_path):
     img = nib.Nifti1Image(image, affine=None)
     nib.save(img, file_path)
 
-def read_dicom(files, flip=False):
+def read_dicom(files, reorient=True):
     slices = []
     files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
     for file in files:
@@ -32,8 +33,21 @@ def read_dicom(files, flip=False):
 
     image = jnp.stack(slices, axis=0)
 
-    if flip:
-        image = jnp.flip(image, axis=0)
+    if reorient:
+        # Reorient the 3D array using SimpleITK
+        # (a) Read the whole DICOM series properly
+        reader = sitk.ImageSeriesReader()
+        reader.SetFileNames(files)
+        sitk_image = reader.Execute()
+        
+        # (b) Reorient to RAS+ (Right-Anterior-Superior) orientation
+        sitk_canonical = sitk.DICOMOrient(sitk_image, 'ARS')
+        
+        # (c) Convert back to a numpy array (SimpleITK uses z,y,x ordering)
+        np_image = sitk.GetArrayFromImage(sitk_canonical)  # shape (slices, height, width)
+        
+        # (d) Convert to jax.numpy
+        image = jnp.array(np_image)
 
     normalized_image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image))
     return normalized_image

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
+from src.utils import jax_to_numpy
 
 def plot_slice(ax, volume, slice=65, cmap='gray', axis=0):
     # set NaN values to red on colormap
@@ -46,11 +47,13 @@ def plot_3d_surfaces(volumes, slice_idx, axis=0, cmap="viridis", limit=0):
 def plot_surface(ax, volume, slice_idx, axis=0, cmap="viridis", limit=0):
     """Plots a 3D surface of a 2D slice from a 3D matrix."""
     if axis == 0:
-        data_slice = np.abs(volume[slice_idx, :, :])  # Take absolute to handle complex values
+        data_slice = jnp.abs(volume[slice_idx, :, :])  # Take absolute to handle complex values
     elif axis == 1:
-        data_slice = np.abs(volume[:, slice_idx, :])
+        data_slice = jnp.abs(volume[:, slice_idx, :])
     elif axis == 2:
-        data_slice = np.abs(volume[:, :, slice_idx])
+        data_slice = jnp.abs(volume[:, :, slice_idx])
+
+    data_slice = jax_to_numpy(data_slice)  # Convert JAX array to NumPy array
 
     X, Y = np.meshgrid(np.arange(data_slice.shape[1]), np.arange(data_slice.shape[0]))  # Create grid
     ax.plot_surface(X, Y, data_slice, cmap=cmap, edgecolor='none')

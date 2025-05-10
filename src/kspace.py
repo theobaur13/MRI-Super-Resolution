@@ -1,5 +1,5 @@
-import numpy as np
 import jax.numpy as jnp
+import jax.random as random
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
 
 def convert_to_kspace(image):
@@ -14,7 +14,7 @@ def convert_to_image(kspace):
 
 def crop(kspace, axis, size=256):
     # Crop the k-space to the specified size along the specified axis, keeping the aspect ratio
-    center = np.array(kspace.shape) // 2
+    center = jnp.array(kspace.shape) // 2
     
     # Create a mask that keeps only the center of the k-space, where the axis is the axis that is kept
     slices = [slice(None)] * 3
@@ -44,9 +44,12 @@ def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20, invert=False):
         gaussian = jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
     return kspace * gaussian
 
-def random_noise(image, intensity=0.1, frequency=0.1):
-    noise_mask = np.random.rand(*image.shape) < frequency
-    random_noise = np.random.uniform(-intensity, intensity, size=image.shape)
+def random_noise(image, key, intensity=0.1, frequency=0.1):
+    key_obj = random.PRNGKey(key)
+    key_mask, key_noise = random.split(key_obj)
+
+    noise_mask = random.uniform(key_mask, shape=image.shape) < frequency
+    random_noise = random.uniform(key_noise, shape=image.shape, minval=-intensity, maxval=intensity)
     noise = noise_mask * random_noise
 
     return image + noise
