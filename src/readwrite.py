@@ -1,10 +1,10 @@
 import os
-import shutil
 import nibabel as nib
 import jax.numpy as jnp
 import pydicom
 from tqdm import tqdm
 import SimpleITK as sitk
+import dicom2nifti
 from src.paths import get_adni_paths
 
 def read_nifti(file_path, brats=False):
@@ -16,59 +16,37 @@ def read_nifti(file_path, brats=False):
         # Convert from BraTS to Axial-Sagittal-Coronal
         image = jnp.transpose(image, (2, 0, 1))
 
-    image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image) + 1e-8)  # Added epsilon to avoid division by zero
+    # image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image) + 1e-8)  # Added epsilon to avoid division by zero
     return image
 
 def write_nifti(image, file_path):
     img = nib.Nifti1Image(image, affine=None)
     nib.save(img, file_path)
 
-def read_dicom(files, reorient=True):
-    slices = []
-    files.sort(key=lambda x: int(x.split("_")[-3]))  # Sort files by slice number
-    for file in files:
-        if file.endswith(".dcm"):
-            img = pydicom.dcmread(file)
-            slices.append(img.pixel_array)
+def convert_adni(adni_dir, output_dir):
+    t1_5_paths, t3_paths = get_adni_paths(adni_dir)
 
-    image = jnp.stack(slices, axis=0)
+    # Create 1.5T and 3T subdirectories
+    os.makedirs(os.path.join(output_dir, "1.5T"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "3T"), exist_ok=True)
 
-    if reorient:
-        # Reorient the 3D array using SimpleITK
-        # (a) Read the whole DICOM series properly
-        reader = sitk.ImageSeriesReader()
-        reader.SetFileNames(files)
-        sitk_image = reader.Execute()
-        
-        # (b) Reorient to RAS+ (Right-Anterior-Superior) orientation
-        sitk_canonical = sitk.DICOMOrient(sitk_image, 'ARS')
-        
-        # (c) Convert back to a numpy array (SimpleITK uses z,y,x ordering)
-        np_image = sitk.GetArrayFromImage(sitk_canonical)  # shape (slices, height, width)
-        
-        # (d) Convert to jax.numpy
-        image = jnp.array(np_image)
+    def process(paths, target_dir):
+        for dir in tqdm(paths):
+            # Edit timestamps to reflect the directory name
+            timestamp = dir.split("\\")[-2]
+            timestamp = timestamp.replace(".0", "")
+            timestamp = timestamp.replace("_", "")
+            timestamp = timestamp.replace("-", "")
+            contents = os.listdir(dir)
+            
+            old_name = contents[0]
+            parts = old_name.split("_")
+            parts[-4] = timestamp
+            new_name = "_".join(parts)
+            new_name = new_name.replace(".dcm", ".nii.gz")
 
-    normalized_image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image))
-    return normalized_image
+            # Convert the volume to a NIfTI image
+            dicom2nifti.dicom_series_to_nifti(dir, os.path.join(target_dir, new_name), reorient_nifti=True)
 
-def collapse_adni(adni_dir, output_dir):
-    t1_5_paths, t3_paths = get_adni_paths(adni_dir, limit=100000)
-    paths = t1_5_paths + t3_paths
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    for dir in tqdm(paths):
-        contents = os.listdir(dir)
-        timestamp = dir.split("\\")[-2]
-        timestamp = timestamp.replace(".0", "")
-        timestamp = timestamp.replace("_", "")
-        timestamp = timestamp.replace("-", "")
-
-        for file in contents:
-            if file.endswith(".dcm"):
-                old_name = file
-                parts = old_name.split("_")
-                parts[-4] = timestamp
-                new_name = "_".join(parts)
-                shutil.copy(os.path.join(dir, file), os.path.join(output_dir, new_name))
+    process(t1_5_paths, os.path.join(output_dir, "1.5T"))
+    process(t3_paths, os.path.join(output_dir, "3T"))

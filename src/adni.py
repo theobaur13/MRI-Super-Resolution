@@ -1,73 +1,48 @@
 import os
-import pandas as pd
-from tqdm import tqdm
 import re
 from datetime import datetime
 
-def adni_dataframe(collapsed_path):
-    data = []
+def get_matching_adni_scan(path):
+    image = os.path.basename(path)
+    adni_dir = os.path.dirname(os.path.dirname(path))
 
-    pattern = re.compile(
-        r'ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)'
-    )
-
-    for file in tqdm(os.listdir(collapsed_path)):
-        match = pattern.match(file)
-        if match:
-            patient_id = match.group(1)
-            description = match.group(2)
-            timestamp_raw = match.group(3)
-            slice_number = match.group(4)
-            image_id = match.group(5)
-            full_path = os.path.join(collapsed_path, file)
-
-            data.append({
-                'Patient ID': patient_id,
-                'Description': description,
-                'Timestamp': datetime.strptime(timestamp_raw, '%Y%m%d%H%M%S%f').date(),
-                'Slice Number': int(slice_number),
-                'Image ID': image_id,
-                'File Path': full_path
-            })
-
-    return pd.DataFrame(data)
-
-def get_adni_pair(df, index):
-    df_1_5T = df[df["Description"] == "Axial_PD_T2_FSE_"]
-    df_1_5T = df_1_5T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
-    patient_id, date, image_id = list(df_1_5T.groups.keys())[index][0], list(df_1_5T.groups.keys())[index][1], list(df_1_5T.groups.keys())[index][2]
-    paths_1_5T = df_1_5T.get_group((patient_id, date, image_id))["File Path"].tolist()
-
-    df_3T = df[df["Description"] == "Double_TSE"]
-    df_3T = df_3T.groupby(['Patient ID', 'Timestamp', 'Image ID'])
-    _, _, image_id = list(df_3T.groups.keys())[index][0], list(df_3T.groups.keys())[index][1], list(df_3T.groups.keys())[index][2]
-    paths_3T = df_3T.get_group((patient_id, date, image_id))["File Path"].tolist()
+    # Search the 1.5T and 3T directories for the given image_id
+    pattern = re.compile(r'ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)')
+    match = pattern.match(image)
     
-    return paths_1_5T, paths_3T
+    if match:
+        # Extract patient ID, description, and timestamp from the filename
+        patient_id = match.group(1)
+        query_description = match.group(2)
+        timestamp_raw = match.group(3)
+        datestamp = datetime.strptime(timestamp_raw, '%Y%m%d%H%M%S%f').date()
+        datestamp = str(datestamp).replace("-", "")
 
-def adni_search(input_path, output_path):
-    df = pd.read_csv(input_path)
-    df['Field Strength'] = df['Imaging Protocol'].str.extract(r'(\d+\.\d+)').astype(float)
+        # Check if the image is in the 1.5T or 3T directory
+        if query_description == "Axial_PD_T2_FSE_":
+            target_strengh = "3T"
+            target_description = "Double_TSE"
+        elif query_description == "Double_TSE":
+            target_strengh = "1.5T"
+            target_description = "Axial_PD_T2_FSE_"
 
-    # Filter Description must be "Axial PD/T2 FSE" or "Double_TSE"
-    df = df[df['Description'].isin(["Axial PD/T2 FSE", "Double_TSE"])]
+        # If image is in 1.5T, search in 3T and vice versa
+        target_dir = os.path.join(adni_dir, target_strengh)
 
-    # Group by Subject ID and Study Date, then filter for subjects that have both 1.5T and 3T
-    valid_subjects = df.groupby(['Subject ID', 'Study Date'])['Field Strength'].nunique()
-    valid_subjects = valid_subjects[valid_subjects > 1].index  # Keep only those with more than one unique field strength
+        # Iterate through the files names in the target directory
+        target = None
+        for file in os.listdir(target_dir):
+            search_pattern = re.compile(rf'ADNI_{patient_id}_MR_{target_description}_br_raw_{datestamp}.*')
 
-    # Filter the original DataFrame
-    filtered_df = df[df.set_index(['Subject ID', 'Study Date']).index.isin(valid_subjects)]
+            if search_pattern.match(file):
+                target = os.path.join(target_dir, file)
+                break
 
-    # Save image ids to a txt file in comma-separated format (image_id_1, image_id_2, ...)
-    image_ids = filtered_df['Image ID'].tolist()
-    image_ids = [str(id) for id in image_ids]
-    image_ids_str = ', '.join(image_ids)
-
-    with open(output_path, 'w') as f:
-        f.write(image_ids_str)
-
-def adni_search_by_id(df, image_id):
-    # Return the paths of the images with the given image_id
-    paths = df[df['Image ID'] == image_id]['File Path'].tolist()
-    return paths
+        # Return the paths of the images with the given image_id in order of 1.5T and 3T
+        if target_strengh == "1.5T":
+            return target, path
+        elif target_strengh == "3T":
+            return path, target
+        else:
+            print(f"No matching image found in {target_strengh} directory for {image}")
+            return None

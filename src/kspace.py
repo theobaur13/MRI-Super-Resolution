@@ -44,7 +44,7 @@ def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20, invert=False):
         gaussian = jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
     return kspace * gaussian
 
-def random_noise(image, key, intensity=0.1, frequency=0.1):
+def random_noise(image, key=42, intensity=0.1, frequency=0.1):
     key_obj = random.PRNGKey(key)
     key_mask, key_noise = random.split(key_obj)
 
