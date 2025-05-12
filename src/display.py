@@ -1,34 +1,54 @@
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
-from src.utils import jax_to_numpy
+from src.utils import jax_to_numpy, world_to_voxel
 
-def plot_slice(ax, volume, slice=65, cmap='gray', axis=0):
-    # set NaN values to red on colormap
-    cmap = plt.cm.gray
-    cmap.set_bad(color='red')
+def plot_slice(ax, nifti, slice=65, cmap='gray', axis=0):
+    volume = jnp.array(nifti.get_fdata())
+    affine = nifti.affine
+
+    # Accquire the slice in world coordinates
+    if axis == 0:
+        world_coord = np.array([slice, 0, 0])
+    elif axis == 1:
+        world_coord = np.array([0, slice, 0])
+    elif axis == 2:
+        world_coord = np.array([0, 0, slice])
+
+    # Convert world coordinates to voxel coordinates
+    voxel_coord = world_to_voxel(world_coord, affine)
+
+    # Get the slice in voxel coordinates
+    if axis == 0:
+        slice = int(voxel_coord[0])
+    elif axis == 1:
+        slice = int(voxel_coord[1])
+    elif axis == 2:
+        slice = int(voxel_coord[2])
     
-    volume = volume.real
+    # Get the slice from the volume
     if axis == 0:
         volume = volume[slice, :, :]
     elif axis == 1:
         volume = volume[:, slice, :]
     elif axis == 2:
         volume = volume[:, :, slice]
-        
+
     ax.imshow(jnp.abs(volume), cmap=cmap)
-    # ax.axis('off')
 
-def display_comparison(volume_1, volume_2, slice=24, axis=0, kspace=True):
-    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+def display_comparison(niftis, slice=24, axis=0):
+    fig = plt.figure(figsize=(15, 10))
 
-    plot_slice(axes[0], volume_1, slice=slice, axis=axis)
-    axes[0].set_title('Image 1')
+    for i, nifti in enumerate(niftis):
+        ax = fig.add_subplot(1, len(niftis), i + 1)
+        plot_slice(ax, nifti, slice=slice, axis=axis)
+        ax.set_title(f"Image {i+1}")
 
-    if kspace:
-        jnp.where(volume_2 == 0, jnp.nan, volume_2)
-    plot_slice(axes[1], volume_2, slice=slice, axis=axis)
-    axes[1].set_title('Image 2')
+    # plot_slice(axes[0], nifti_1, slice=slice, axis=axis)
+    # axes[0].set_title('Image 1')
+    
+    # plot_slice(axes[1], nifti_2, slice=slice, axis=axis)
+    # axes[1].set_title('Image 2')
 
     plt.tight_layout()
     plt.show(block=False)

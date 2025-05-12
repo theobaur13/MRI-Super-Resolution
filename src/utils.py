@@ -61,3 +61,7 @@ def robust_max(image, axis, slice_idx=None):
     
     # Calculate the maximum of the filtered data
     return filtered_data.max()
+
+def world_to_voxel(world_coord, affine):
+    """Convert real-world (mm) coordinates to voxel indices."""
+    return np.round(np.linalg.inv(affine) @ np.append(world_coord, 1))[:3].astype(int)

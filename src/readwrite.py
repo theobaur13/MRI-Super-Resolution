@@ -1,27 +1,37 @@
 import os
 import nibabel as nib
+from nilearn import datasets, image
 import jax.numpy as jnp
-import pydicom
+import numpy as np
 from tqdm import tqdm
-import SimpleITK as sitk
 import dicom2nifti
 from src.paths import get_adni_paths
 
 def read_nifti(file_path, brats=False):
-    img = nib.load(file_path)
-    img = nib.as_closest_canonical(img)
-    image = jnp.array(img.get_fdata())  # Use get_fdata() for float64 and better precision
-    
+    nifti = nib.load(file_path)
+    nifti = nib.as_closest_canonical(nifti)
+
+    # Step 1: Resample to MNI152 template
+    # mni_template = datasets.load_mni152_template(resolution=1)
+    # nifti = image.resample_to_img(nifti, mni_template, interpolation='continuous', force_resample=True, copy_header=True)
+
+    # Step 2: Get data as JAX array
+    volume = jnp.array(nifti.get_fdata())
+
+    # Step 3: Optional axis reordering (e.g., BraTS)
     if brats:
-        # Convert from BraTS to Axial-Sagittal-Coronal
-        image = jnp.transpose(image, (2, 0, 1))
+        volume = jnp.transpose(volume, (2, 0, 1))
 
-    # image = (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image) + 1e-8)  # Added epsilon to avoid division by zero
-    return image
+    # Step 4: Normalize intensity to [0, 1]
+    volume = (volume - jnp.min(volume)) / (jnp.max(volume) - jnp.min(volume) + 1e-8)
 
-def write_nifti(image, file_path):
-    img = nib.Nifti1Image(image, affine=None)
-    nib.save(img, file_path)
+    # Step 5: Re-wrap volume into a new NIfTI image (with original resampled affine)
+    normalized_nifti = nib.Nifti1Image(np.array(volume), affine=nifti.affine)
+
+    return normalized_nifti
+
+def write_nifti(nifti, file_path):
+    nib.save(nifti, file_path)
 
 def convert_adni(adni_dir, output_dir):
     t1_5_paths, t3_paths = get_adni_paths(adni_dir)
