@@ -16,7 +16,7 @@ def cartesian_undersampling(kspace, axis, factor=3):
     mask[tuple(slices)] = 0
     return kspace * mask
 
-def radial_undersampling(kspace, axis, factor=0.5):
+def cylindrical_crop(kspace, axis, factor=0.5):
     radius = int((kspace.shape[(axis + 1) % 3] * factor) // 2)
     radius = max(radius, 1)
 

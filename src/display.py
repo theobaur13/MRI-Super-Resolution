@@ -1,12 +1,31 @@
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
-from src.utils import jax_to_numpy, get_slice
+from src.utils import jax_to_numpy, slice_nifti
 
 def plot_slice_from_nifti(ax, nifti, slice=65, cmap='gray', axis=0):
-    ax.imshow(jnp.abs(get_slice(nifti, slice, axis)), cmap=cmap)
+    ax.imshow(jnp.abs(slice_nifti(nifti, slice, axis)), cmap=cmap)
 
-def display_comparison(niftis, slice=24, axis=0):
+def plot_slice_from_volume(ax, volume, slice=65, cmap='gray', axis=0):
+    if axis == 2:
+        ax.imshow(jnp.abs(volume[:, :, slice]), cmap=cmap)
+    elif axis == 1:
+        ax.imshow(jnp.abs(volume[:, slice, :]), cmap=cmap)
+    elif axis == 0:
+        ax.imshow(jnp.abs(volume[slice, :, :]), cmap=cmap)
+
+def display_comparison_volumes(volumes, slice=24, axis=0):
+    fig = plt.figure(figsize=(15, 10))
+
+    for i, volume in enumerate(volumes):
+        ax = fig.add_subplot(1, len(volumes), i + 1)
+        plot_slice_from_volume(ax, volume, slice=slice, axis=axis)
+        ax.set_title(f"Image {i+1}")
+
+    plt.tight_layout()
+    plt.show(block=False)
+
+def display_comparison_niftis(niftis, slice=24, axis=0):
     fig = plt.figure(figsize=(15, 10))
 
     for i, nifti in enumerate(niftis):

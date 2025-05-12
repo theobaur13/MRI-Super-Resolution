@@ -33,16 +33,16 @@ def crop(kspace, axis, size=256):
     slices[shorter_axis] = slice(center[shorter_axis] - int(size / aspect_ratio) // 2, center[shorter_axis] + int(size / aspect_ratio) // 2)
     return kspace[tuple(slices)]
 
-def gaussian_plane(kspace, axis, sigma=0.5, mu=0.0, A=20, invert=False):
-    x = jnp.linspace(0, 1, kspace.shape[axis])
-    y = jnp.linspace(0, 1, kspace.shape[(axis + 1) % 3])
-    z = jnp.linspace(0, 1, kspace.shape[(axis + 2) % 3])
+def gaussian_amplification(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+    x = jnp.linspace(0, 1, volume.shape[axis])
+    y = jnp.linspace(0, 1, volume.shape[(axis + 1) % 3])
+    z = jnp.linspace(0, 1, volume.shape[(axis + 2) % 3])
     X, Y, Z = jnp.meshgrid(x, y, z, indexing='ij')
 
     gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
     if invert:
         gaussian = jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
-    return kspace * gaussian
+    return volume * gaussian
 
 def random_noise(image, key=42, intensity=0.1, frequency=0.1):
     key_obj = random.PRNGKey(key)
@@ -53,6 +53,3 @@ def random_noise(image, key=42, intensity=0.1, frequency=0.1):
     noise = noise_mask * random_noise
 
     return image + noise
-
-def local_subvoxel_shift():
-    pass  # Placeholder for local subvoxel shift function
