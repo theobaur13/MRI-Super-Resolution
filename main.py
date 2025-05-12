@@ -24,8 +24,8 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     
     # Image manipulation
     simulated_volume = convert_to_image(gaussian_amped_kspace)
-    gibbs_reduced_volume = numpy_to_jax(gibbs_removal(jax_to_numpy(simulated_volume), slice_axis=axis))
-    gaussian_amped_image = gaussian_amplification(gibbs_reduced_volume, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
+    # gibbs_reduced_volume = numpy_to_jax(gibbs_removal(jax_to_numpy(simulated_volume), slice_axis=axis))
+    gaussian_amped_image = gaussian_amplification(simulated_volume, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
     noisy_image = random_noise(gaussian_amped_image, intensity=0.01, frequency=0.3)
     
     if visualize:
@@ -38,7 +38,7 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
 
         # Display the original and simulated images
         display_comparison_volumes([
-            original_volume, simulated_volume, gibbs_reduced_volume, gaussian_amped_image, noisy_image], 
+            original_volume, simulated_volume, gaussian_amped_image, noisy_image], 
             slice=voxel_slice, axis=axis)
 
     # Convert to NIfTI
@@ -56,37 +56,65 @@ if __name__ == "__main__":
 
     # Command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=[
-        "convert-adni",
-        "simulate",
-        "analyse-noise",
-        "analyse-brightness",
-        "batch-convert",
-        "view"
-        ], help="Action to perform")
-    parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
-    parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    subparsers = parser.add_subparsers(dest="action", required=True)
 
-    # View and simulate arguments
-    parser.add_argument("--path", type=str, help="Relative path to NIfTI file to display")
+    # Subparser for converting ADNI data
+    # > py main.py convert-adni
+    # > py main.py convert-adni --ADNI_dir "data/ADNI" --ADNI_nifti_dir "data/ADNI_NIfTIs"
+    convert_parser = subparsers.add_parser("convert-adni", help="Convert ADNI data to NIfTI format")
+    convert_parser.add_argument("--ADNI_dir", type=str, default=ADNI_dir, help="Path to ADNI directory")
+    convert_parser.add_argument("--ADNI_nifti_dir", type=str, default=ADNI_nifti_dir, help="Path to ADNI NIfTI directory")
 
-    # Analysis arguments
-    parser.add_argument("--dataset", type=str, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
+    # Subparser for simulating data
+    # > py main.py simulate --path "data/ADNI_NIfTIs/3T/ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24
+    simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
+    simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
+    simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
+    simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
-    # Batch conversion arguments
-    parser.add_argument("--seq", type=str, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
-    parser.add_argument("--brats_dataset", type=str, help="Dataset type (e.g., 'BraSyn', 'GLI')")
+    # Subparser for analysing noise
+    # > py main.py analyse-noise --dataset "ADNI" --axis 0 
+    # > py main.py analyse-noise --dataset "BraTS" --axis 0 
+    analyse_noise_parser = subparsers.add_parser("analyse-noise", help="Analyse noise in data")
+    analyse_noise_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
+    analyse_noise_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    analyse_noise_parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
 
+    # Subparser for analysing brightness
+    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 0
+    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 0
+    analyse_brightness_parser = subparsers.add_parser("analyse-brightness", help="Analyse brightness in data")
+    analyse_brightness_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
+    analyse_brightness_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+
+    # Subparser for batch conversion
+    # > py main.py batch-convert --seq "t1c" --brats_dataset "BraSyn" --output_dir "data/BraTS_output"
+    batch_convert_parser = subparsers.add_parser("batch-convert", help="Batch convert data")
+    batch_convert_parser.add_argument("--seq", type=str, required=True, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
+    batch_convert_parser.add_argument("--brats_dataset", type=str, required=True, help="Dataset type (e.g., 'BraSyn', 'GLI')")
+    batch_convert_parser.add_argument("--output_dir", type=str, default=brats_output_dir, help="Output directory for converted data")
+
+    # Subparser for viewing data
+    # > py main.py view --path "data/BraTS_output/BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
+    # > py main.py view --path "data/data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000/BraSyn/train/BraTS-GLI-00000-000/BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
+    # > py main.py view --path "data/ADNI_NifTIs/1.5T/ADNI_002_S_0413_MR_Axial_PD_T2_FSE__br_raw_20061115094759_1_S22556_I29704.nii.gz" --slice 24 --axis 2
+    view_parser = subparsers.add_parser("view", help="View NIfTI data")
+    view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
+    view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
+    view_parser.add_argument("--axis", type=int, default=0, help="Axis for viewing")
+    
     args = parser.parse_args()
     action = args.action.lower()
 
     # Construct ADNI directory if it doesn't exist
-    # > py main.py convert-adni
     if action == "convert-adni":
+        # Arguments
+        ADNI_dir = args.ADNI_dir
+        ADNI_nifti_dir = args.ADNI_nifti_dir
+        
         convert_adni(ADNI_dir, ADNI_nifti_dir)
 
     # Apply degradation to slice in a volume
-    # > py main.py simulate --path "data/ADNI_NIfTIs/3T/ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24
     elif action == "simulate":
         # Arguments
         axis = args.axis
@@ -106,10 +134,6 @@ if __name__ == "__main__":
         plt.show()
 
     # Perform analysis between two types of scans
-    # > py main.py analyse-noise --dataset "ADNI" --axis 0 
-    # > py main.py analyse-noise --dataset "BraTS" --axis 0 
-    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 0
-    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 0
     elif action == "analyse-noise" or action == "analyse-brightness":
         # Arguments
         axis = args.axis
@@ -167,11 +191,11 @@ if __name__ == "__main__":
         plt.show()
 
     # Apply degradation to BraTS scans
-    # > py main.py batch-convert --seq "t2f" --brats_dataset "BraSyn"
     elif action == "batch-convert":
         # Arguments
         seq = args.seq                  # t1c, t1n, t2f, t2w
         brats_dataset = args.brats_dataset          # BraSyn, GLI
+        brats_output_dir = args.output_dir
     
         os.makedirs(brats_output_dir, exist_ok=True)
 
@@ -183,9 +207,7 @@ if __name__ == "__main__":
             simulated_nifti, _ = simluation_pipeline(nifti, axis=axis)
             write_nifti(simulated_nifti, os.path.join(brats_output_dir, os.path.basename(path)))
 
-    # > py main.py view --path "data/BraTS_output/BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
-    # > py main.py view --path "data/data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000/BraSyn/train/BraTS-GLI-00000-000/BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
-    # > py main.py view --path "data/ADNI_NifTIs/1.5T/ADNI_002_S_0413_MR_Axial_PD_T2_FSE__br_raw_20061115094759_1_S22556_I29704.nii.gz" --slice 24 --axis 2
+    # View a slice of a NIfTI file
     elif action == "view":
         # Arguments
         relative_path = args.path
