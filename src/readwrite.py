@@ -27,7 +27,7 @@ def read_nifti(file_path, brats=False):
 
     # Step 5: Re-wrap volume into a new NIfTI image (with original resampled affine)
     normalized_nifti = nib.Nifti1Image(np.array(volume), affine=nifti.affine)
-
+    
     return normalized_nifti
 
 def write_nifti(nifti, file_path):

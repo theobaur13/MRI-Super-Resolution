@@ -14,7 +14,7 @@ from src.gibbs_removal import *
 # Axis 0: Saggital, Axis 1: Coronal, Axis 2: Axial
 
 # Degrade 3T scans to resemble 1.5T scans
-def simluation_pipeline(kspace, axis):
+def simluation_pipeline(kspace, axis, visualize=False):
     simulated_kspace = radial_undersampling(kspace, axis=axis, factor=0.7)
     simulated_kspace = gaussian_plane(simulated_kspace, axis=0, sigma=0.5, mu=0.5, A=2)
     simulated_image = convert_to_image(simulated_kspace)
@@ -53,7 +53,6 @@ if __name__ == "__main__":
     parser.add_argument("--path", type=str, help="Relative path to NIfTI file to display")
 
     # Analysis arguments
-    parser.add_argument("--limit", type=int, default=5, help="Number of images to process")
     parser.add_argument("--dataset", type=str, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
 
     # Batch conversion arguments
@@ -101,45 +100,63 @@ if __name__ == "__main__":
         plt.show()
 
     # Perform analysis between two types of scans
-    # > py main.py analyse-noise --dataset "ADNI" --axis 0 --limit 52
-    # > py main.py analyse-noise --dataset "BraTS" --axis 0 --limit 15
-    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 0 --limit 52
-    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 0 --limit 15
+    # > py main.py analyse-noise --dataset "ADNI" --axis 0 
+    # > py main.py analyse-noise --dataset "BraTS" --axis 0 
+    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 0
+    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 0
     elif action == "analyse-noise" or action == "analyse-brightness":
         # Arguments
         axis = args.axis
-        limit = args.limit
         datset = args.dataset.lower()
-        shape = (99,117,48)
 
+        # Sort out paths for ADNI and BraTS
         if datset == "adni":
-            read_fn = lambda path: read_nifti(path).get_fdata()[0:shape[0], 0:shape[1], 0:shape[2]]
+            shape = (256, 256, 44)
             paths_1_5T = sorted(os.listdir(os.path.join(ADNI_nifti_dir, "1.5T")))
             paths_3T = sorted(os.listdir(os.path.join(ADNI_nifti_dir, "3T")))
             paths_1_5T = [os.path.join(ADNI_nifti_dir, "1.5T", p) for p in paths_1_5T]
             paths_3T = [os.path.join(ADNI_nifti_dir, "3T", p) for p in paths_3T]
 
         elif datset == "brats":
-            read_fn = lambda path: read_nifti(path).get_fdata()
+            shape = (240, 240, 155)
             train_paths, validate_paths = get_brats_paths(brats_dir, "t2f", "BraSyn")
             paths_1_5T = train_paths + validate_paths  # Placeholder pairing
             paths_3T = train_paths + validate_paths
 
-        # Allocate hypervolumes
-        hypervolume_1_5T = np.zeros((limit, *shape))
-        hypervolume_3T = np.zeros((limit, *shape))
+        # Load nifti files (remember to implement limit at some point)
+        niftis_1_5T = [read_nifti(path) for path in tqdm(paths_1_5T)]
+        niftis_3T = [read_nifti(path) for path in tqdm(paths_3T)]
 
-        # Load volumes
-        for i in tqdm(range(limit)):
-            hypervolume_1_5T[i] = read_fn(paths_1_5T[i])
-            hypervolume_3T[i] = read_fn(paths_3T[i])
-
+        # Compare SNR at each slice between 1.5T and 3T scans
         if action == "analyse-noise":
+            # Allocate hypervolumes
+            hypervolume_1_5T = np.zeros((len(niftis_1_5T), *shape))
+            for i, nifti in enumerate(niftis_1_5T):
+                hypervolume_1_5T[i] = jnp.array(nifti.get_fdata())[0:shape[0], 0:shape[1], 0:shape[2]]
+            
+            hypervolume_3T = np.zeros((len(niftis_3T), *shape))
+            for i, nifti in enumerate(niftis_3T):
+                hypervolume_3T[i] = jnp.array(nifti.get_fdata())[0:shape[0], 0:shape[1], 0:shape[2]]
+
             compare_snr(hypervolume_1_5T, hypervolume_3T, axis)
 
+        # Compare brightness at a certain point on certain axis between 1.5T and 3T scans
         elif action == "analyse-brightness":
             slice_idx = args.slice
-            generate_brightness_mask(hypervolume_1_5T, hypervolume_3T, slice_idx, axis=axis, sigma=20, lim=0.6)
+            
+            slices_1_5T = []
+            for nifti in niftis_1_5T:
+                slice = get_slice(nifti, slice_idx, axis)
+                slices_1_5T.append(slice)
+
+            slices_3T = []
+            for nifti in niftis_3T:
+                slice = get_slice(nifti, slice_idx, axis)
+                slices_3T.append(slice)
+
+            slices_1_5T = jnp.array(slices_1_5T)
+            slices_3T = jnp.array(slices_3T)
+            generate_brightness_mask(slices_1_5T, slices_3T, axis=axis, sigma=20, lim=0.6)
 
         plt.show()
 
@@ -175,5 +192,5 @@ if __name__ == "__main__":
         nifti = read_nifti(absolute_path)
 
         fig, ax = plt.subplots(1, 1, figsize=(9, 4))
-        plot_slice(ax, nifti, slice=args.slice, axis=args.axis)
+        plot_slice_from_nifti(ax, nifti, slice=args.slice, axis=args.axis)
         plt.show()
