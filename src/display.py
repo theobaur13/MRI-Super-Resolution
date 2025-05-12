@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
-from src.utils import jax_to_numpy, slice_nifti
+from src.conversions import jax_to_numpy
+from src.slicing import slice_nifti
 
 def plot_slice_from_nifti(ax, nifti, slice=65, cmap='gray', axis=0):
     ax.imshow(jnp.abs(slice_nifti(nifti, slice, axis)), cmap=cmap)

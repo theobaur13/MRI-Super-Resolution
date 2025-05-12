@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
 import dicom2nifti
-from src.paths import get_adni_paths
+from src.utils import get_adni_paths
 
 def read_nifti(file_path, brats=False):
     nifti = nib.load(file_path)

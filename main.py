@@ -2,14 +2,13 @@ import os
 import argparse
 import nibabel as nib
 from src.readwrite import *
-from src.paths import *
 from src.analysis import *
-from src.adni import *
-from src.sampling import *
+from src.transformations import *
 from src.utils import *
-from src.kspace import *
+from src.conversions import *
 from src.display import *
 from src.gibbs_removal import *
+from src.slicing import *
 
 # Axis 0: Saggital, Axis 1: Coronal, Axis 2: Axial
 
@@ -111,7 +110,7 @@ if __name__ == "__main__":
         # Arguments
         ADNI_dir = args.ADNI_dir
         ADNI_nifti_dir = args.ADNI_nifti_dir
-        
+
         convert_adni(ADNI_dir, ADNI_nifti_dir)
 
     # Apply degradation to slice in a volume
