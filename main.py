@@ -39,6 +39,11 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
         display_comparison_volumes([
             original_volume, simulated_volume, gaussian_amped_image, noisy_image], 
             slice=voxel_slice, axis=axis)
+        
+        # Display the k-space
+        plot_3d_surfaces(
+            [original_kspace, cylindrical_cropped_kspace, gaussian_amped_kspace], 
+            slice_idx=voxel_slice, axis=axis, cmap="plasma", limit=10)
 
     # Convert to NIfTI
     simulated_nifti = nib.Nifti1Image(jax_to_numpy(noisy_image), affine=nifti.affine)
@@ -72,16 +77,16 @@ if __name__ == "__main__":
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
     # Subparser for analysing noise
-    # > py main.py analyse-noise --dataset "ADNI" --axis 0 
-    # > py main.py analyse-noise --dataset "BraTS" --axis 0 
+    # > py main.py analyse-noise --dataset "ADNI" --axis 2 
+    # > py main.py analyse-noise --dataset "BraTS" --axis 2 
     analyse_noise_parser = subparsers.add_parser("analyse-noise", help="Analyse noise in data")
     analyse_noise_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
     analyse_noise_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
     analyse_noise_parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
 
     # Subparser for analysing brightness
-    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 0
-    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 0
+    # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 2
+    # > py main.py analyse-brightness --dataset "BraTS" --slice 65 --axis 2
     analyse_brightness_parser = subparsers.add_parser("analyse-brightness", help="Analyse brightness in data")
     analyse_brightness_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
     analyse_brightness_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
@@ -128,7 +133,6 @@ if __name__ == "__main__":
 
         simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis=axis, visualize=True, slice=slice_idx)
 
-        display_comparison_niftis([nifti_1_5T, nifti_3T], slice=slice_idx, axis=axis)
         display_comparison_niftis([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis)
         plt.show()
 
