@@ -78,6 +78,9 @@ def crop(kspace, axis, size=256):
     return kspace[tuple(slices)]
 
 def gaussian_amplification(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+    # sigma: standard deviation of the Gaussian
+    # mu: mean of the Gaussian
+    # A: amplitude of the Gaussian
     x = jnp.linspace(0, 1, volume.shape[axis])
     y = jnp.linspace(0, 1, volume.shape[(axis + 1) % 3])
     z = jnp.linspace(0, 1, volume.shape[(axis + 2) % 3])

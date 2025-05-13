@@ -36,14 +36,16 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
         voxel_slice = world_to_voxel_slice(real_world_slice, axis, nifti.affine)
 
         # Display the original and simulated images
-        display_comparison_volumes([
+        display_img([
             original_volume, simulated_volume, gaussian_amped_image, noisy_image], 
-            slice=voxel_slice, axis=axis)
+            slice=voxel_slice, axis=axis,
+            titles=["Original", "k-Space Manipulation", "Central Brightening", "Noise"])
         
         # Display the k-space
-        plot_3d_surfaces(
+        display_3d(
             [original_kspace, cylindrical_cropped_kspace, gaussian_amped_kspace], 
-            slice_idx=voxel_slice, axis=axis, cmap="plasma", limit=10)
+            slice=voxel_slice, axis=axis, limit=1,
+            titles=["Original k-Space", "Cylindrical Crop", "Gaussian Amplification"])
 
     # Convert to NIfTI
     simulated_nifti = nib.Nifti1Image(jax_to_numpy(noisy_image), affine=nifti.affine)
@@ -133,7 +135,13 @@ if __name__ == "__main__":
 
         simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis=axis, visualize=True, slice=slice_idx)
 
-        display_comparison_niftis([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis)
+        # Display the target vs simulated image
+        display_img([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 1.5T Image", "Simulated 1.5T Image"])
+
+        # Display the target vs simulated k-space
+        original_volume = jnp.array(nifti_1_5T.get_fdata())
+        original_kspace = convert_to_kspace(original_volume)
+        display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Target 1.5T k-Space", "Simulated 1.5T k-Space"])
         plt.show()
 
     # Perform analysis between two types of scans
@@ -196,9 +204,9 @@ if __name__ == "__main__":
     # Apply degradation to BraTS scans
     elif action == "batch-convert":
         # Arguments
-        seq = args.seq                  # t1c, t1n, t2f, t2w
+        seq = args.seq                              # t1c, t1n, t2f, t2w
         brats_dataset = args.brats_dataset          # BraSyn, GLI
-        brats_output_dir = args.output_dir
+        brats_output_dir = args.output_dir          # Output directory for converted data
     
         os.makedirs(brats_output_dir, exist_ok=True)
 
@@ -217,7 +225,5 @@ if __name__ == "__main__":
         absolute_path = os.path.join(base_dir, relative_path)
 
         nifti = read_nifti(absolute_path)
-
-        fig, ax = plt.subplots(1, 1, figsize=(9, 4))
-        plot_slice_from_nifti(ax, nifti, slice=args.slice, axis=args.axis)
+        display_img([nifti], slice=args.slice, axis=args.axis)
         plt.show()

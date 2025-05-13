@@ -4,56 +4,54 @@ import numpy as np
 from src.conversions import jax_to_numpy
 from src.slicing import slice_nifti
 
-def plot_slice_from_nifti(ax, nifti, slice=65, cmap='gray', axis=0):
-    ax.imshow(jnp.abs(slice_nifti(nifti, slice, axis)), cmap=cmap)
-
-def plot_slice_from_volume(ax, volume, slice=65, cmap='gray', axis=0):
-    if axis == 2:
-        ax.imshow(jnp.abs(volume[:, :, slice]), cmap=cmap)
+# Extract a 2D slice from a 3D volume or NIfTI object.
+def extract_slice(data, slice=65, axis=0):
+    if hasattr(data, "get_fdata"):
+        # If data is a NIfTI object, use the slice_nifti function
+        return slice_nifti(data, slice_idx=slice, axis=axis)
+    
+    # If data is a raw volume, extract the slice directly
+    volume = jnp.array(data)
+    if axis == 0:
+        return volume[slice, :, :]
     elif axis == 1:
-        ax.imshow(jnp.abs(volume[:, slice, :]), cmap=cmap)
-    elif axis == 0:
-        ax.imshow(jnp.abs(volume[slice, :, :]), cmap=cmap)
+        return volume[:, slice, :]
+    elif axis == 2:
+        return volume[:, :, slice]
 
-def display_comparison_volumes(volumes, slice=24, axis=0):
+# Generic slice plotter for volume or NIfTI.
+def plot_slice(ax, data, slice=65, axis=0, cmap='gray'):
+    slice_data = extract_slice(data, slice=slice, axis=axis)
+    ax.imshow(jnp.abs(slice_data), cmap=cmap)
+
+# Display a comparison of NIfTI or raw volumes."""
+def display_img(data_list, slice=24, axis=0, titles=None):
     fig = plt.figure(figsize=(15, 10))
 
-    for i, volume in enumerate(volumes):
-        ax = fig.add_subplot(1, len(volumes), i + 1)
-        plot_slice_from_volume(ax, volume, slice=slice, axis=axis)
-        ax.set_title(f"Image {i+1}")
+    for i, data in enumerate(data_list):
+        ax = fig.add_subplot(1, len(data_list), i + 1)
+        plot_slice(ax, data, slice=slice, axis=axis)
+        ax.set_title(titles[i] if titles else f"Image {i+1}")
 
     plt.tight_layout()
     plt.show(block=False)
 
-def display_comparison_niftis(niftis, slice=24, axis=0):
+# Display a 3D surface plot of the volume or NIfTI object.
+def display_3d(data, slice=65, axis=0, limit=1, titles=None):
     fig = plt.figure(figsize=(15, 10))
 
-    for i, nifti in enumerate(niftis):
-        ax = fig.add_subplot(1, len(niftis), i + 1)
-        plot_slice_from_nifti(ax, nifti, slice=slice, axis=axis)
-        ax.set_title(f"Image {i+1}")
+    for i, volume in enumerate(data):
+        ax = fig.add_subplot(1, len(data), i + 1, projection='3d')
+        plot_surface(ax, volume, slice=slice, axis=axis, limit=limit)
+        ax.set_title(titles[i] if titles else f"Image {i+1}")
 
     plt.tight_layout()
     plt.show(block=False)
 
-def plot_3d_surfaces(volumes, slice_idx, axis=0, cmap="viridis", limit=0):
-    fig = plt.figure(figsize=(15, 10))
-
-    for i, volume in enumerate(volumes):
-        ax = fig.add_subplot(1, len(volumes), i + 1, projection='3d')
-        if axis == 2:
-            plot_surface(ax, volume[:, :, slice_idx], cmap=cmap, limit=limit)
-        elif axis == 1:
-            plot_surface(ax, volume[:, slice_idx, :], cmap=cmap, limit=limit)
-        elif axis == 0:
-            plot_surface(ax, volume[slice_idx, :, :], cmap=cmap, limit=limit)
-
-    plt.tight_layout()
-    plt.show(block=False)
-
-def plot_surface(ax, slice, cmap="viridis", limit=0):
-    numpy_slice = np.abs(jax_to_numpy(slice))  # Convert JAX array to NumPy array
+# Display a 3D surface plot of the volume or NIfTI object.
+def plot_surface(ax, data, slice=65, axis=0, cmap="plasma", limit=0):
+    slice_data = extract_slice(data, slice=slice, axis=axis)
+    numpy_slice = np.abs(jax_to_numpy(slice_data))  # Convert JAX array to NumPy array
 
     X, Y = np.meshgrid(np.arange(numpy_slice.shape[1]), np.arange(numpy_slice.shape[0]))  # Create grid
     ax.plot_surface(X, Y, numpy_slice, cmap=cmap, edgecolor='none')
