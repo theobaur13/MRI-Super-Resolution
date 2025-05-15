@@ -61,4 +61,5 @@ def plot_surface(ax, data, slice=65, axis=0, cmap="plasma", limit=0):
     ax.set_zscale("log")  # Set Z-axis to logarithmic scale
     ax.view_init(elev=30, azim=135)  # Adjust viewing angle
     if limit > 0:
-        ax.set_zlim(0, limit)
+        min = jnp.min(numpy_slice[numpy_slice > 0]) if jnp.any(numpy_slice > 0) else 1e-3
+        ax.set_zlim(min, limit)
