@@ -99,15 +99,5 @@ def compare_snr(hypervolume_1_5T, hypervolume_3T, axis=0, x=30):
     plt.legend()
     plt.show()
 
-def compare_gibbs_ringing(volume_1, volume_2, slice_idx, axis=0):
-    if axis == 0:
-        slice_1 = volume_1[slice_idx, :, :]
-        slice_2 = volume_2[slice_idx, :, :]
-    elif axis == 1:
-        slice_1 = volume_1[:, slice_idx, :]
-        slice_2 = volume_2[:, slice_idx, :]
-    elif axis == 2:
-        slice_1 = volume_1[:, :, slice_idx]
-        slice_2 = volume_2[:, :, slice_idx]
-
+def generate_snr_map():
     pass

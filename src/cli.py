@@ -8,7 +8,7 @@ from src.pipeline import simluation_pipeline
 from src.conversions import convert_to_kspace
 from src.readwrite import read_nifti, write_nifti
 from src.display import display_img, display_3d
-from src.analysis import compare_snr, generate_brightness_mask
+from src.analysis import compare_snr, generate_brightness_mask, generate_snr_map
 from src.slicing import slice_nifti
 from src.utils import get_adni_paths, get_matching_adni_scan, get_brats_paths
 
@@ -104,6 +104,9 @@ def analyse(args, base_dir):
             hypervolume_3T[i] = jnp.array(nifti.get_fdata())[0:shape[0], 0:shape[1], 0:shape[2]]
 
         compare_snr(hypervolume_1_5T, hypervolume_3T, axis)
+
+        # TODO: Create SNR map for given slice.
+        generate_snr_map()
 
     # Compare brightness at a certain point on certain axis between 1.5T and 3T scans
     elif action == "analyse-brightness":
