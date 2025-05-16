@@ -60,20 +60,28 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30, seed=42):
 
     return kspace * mask
 
-# This function magnifies the brightness/intensity of a volume such that the center of each image slice is magnified greater than the edges.
-def gaussian_amplification(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
     # sigma: standard deviation of the Gaussian
     # mu: mean of the Gaussian
     # A: amplitude of the Gaussian
-    x = jnp.linspace(0, 1, volume.shape[axis])
-    y = jnp.linspace(0, 1, volume.shape[(axis + 1) % 3])
-    z = jnp.linspace(0, 1, volume.shape[(axis + 2) % 3])
-    X, Y, Z = jnp.meshgrid(x, y, z, indexing='ij')
+    shape = volume.shape
+    coords = [jnp.linspace(0, 1, shape[i]) for i in range(3)]
+    coords = coords[axis:] + coords[:axis]  
+    X, Y, Z = jnp.meshgrid(*coords, indexing='ij')
 
     gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
     if invert:
-        gaussian = jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2)) - 0.5
-    return volume * gaussian
+        gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2))
+
+    inverse_permutation = jnp.argsort(jnp.array([axis, (axis + 1) % 3, (axis + 2) % 3]))
+    gaussian = jnp.transpose(gaussian, axes=tuple(inverse_permutation))
+    return gaussian
+
+# This function magnifies the brightness/intensity of a volume such that the center of each image slice is magnified greater than the edges.
+def gaussian_amplification(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+    # Create a Gaussian map
+    mask = gaussian(volume, axis, sigma=sigma, mu=mu, A=A, invert=invert)
+    return volume * mask
 
 # This function adds random noise to an image with a specified intensity and frequency.
 def random_noise(image, key=42, intensity=0.1, frequency=0.1):
@@ -86,17 +94,27 @@ def random_noise(image, key=42, intensity=0.1, frequency=0.1):
 
     return image + noise
 
-# TODO: This function applies noise at a greater intensity to the edges of the image.
-def gaussian_noise():
-    pass
+# This function applies noise gradually at a greater intensity to the edges of the image.
+def rician_edge_noise(image, axis=2, sigma=0.4, key=42, edge_strength=0.1):
+    gaussian_mask = gaussian(image, axis=axis, sigma=sigma, mu=0.5, A=1, invert=True)
+    sigma_map = sigma * edge_strength * gaussian_mask
+    noisy_image = rician_noise(image, sigma_map, key=key)
+    return noisy_image
 
 # TODO: This function adds physiological noise to the image.
 def physiological_noise():
     pass
 
-# TODO: This function adds Rician noise to the image.
-def rician_noise():
-    pass
+# This function adds Rician noise to the image.
+def rician_noise(image, sigma, key=42):
+    key_obj = random.PRNGKey(key)
+    key_real, key_imag = random.split(key_obj)
+
+    noise_real = random.normal(key_real, shape=image.shape) * sigma
+    noise_imag = random.normal(key_imag, shape=image.shape) * sigma
+    noisy_complex = image + noise_real + 1j * noise_imag
+    noisy_image = jnp.abs(noisy_complex)
+    return noisy_image
 
 # TODO: This function adds Coil Sensitivity-Driven Noise to the image.
 def coil_sensitivity_noise():

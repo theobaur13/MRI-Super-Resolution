@@ -11,7 +11,9 @@ from src.conversions import (
 from src.transformations import (
     cylindrical_crop,
     gaussian_amplification,
-    random_noise
+    random_noise,
+    rician_noise,
+    rician_edge_noise
 )
 
 from src.gibbs_removal import gibbs_removal
@@ -39,12 +41,18 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     # image = numpy_to_jax(gibbs_removal(jax_to_numpy(image), slice_axis=axis))
     # images["gibbs_reduction"] = image
 
-    image = gaussian_amplification(image, axis=0, sigma=0.4, mu=0.5, A=1, invert=True)
+    image = gaussian_amplification(image, axis=0, sigma=0.4, mu=0.5, A=5, invert=True)
     images["central_brightening"] = image
 
-    image = random_noise(image, intensity=0.01, frequency=0.3)
-    images["noise"] = image
+    # image = random_noise(image, intensity=0.01, frequency=0.3)
+    # images["noise"] = image
+
+    # image = rician_noise(image, sigma=0.01)
+    # images["rician_noise"] = image
     
+    image = rician_edge_noise(image, axis=axis, sigma=0.3, edge_strength=0.1)
+    images["rician_edge_noise"] = image
+
     if visualize:
         if slice is None:
             raise ValueError("Slice index must be provided for visualization.")
