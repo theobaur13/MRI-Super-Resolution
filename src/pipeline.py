@@ -31,7 +31,7 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     kspace = cylindrical_crop(kspace, axis=axis, factor=0.7)
     kspaces["cylindrical_crop"] = kspace
 
-    kspace = gaussian_amplification(kspace, axis=0, sigma=0.5, mu=0.5, A=2)
+    kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=2)
     kspaces["gaussian_amplification"] = kspace
     
     # Image manipulation
@@ -41,7 +41,7 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     # image = numpy_to_jax(gibbs_removal(jax_to_numpy(image), slice_axis=axis))
     # images["gibbs_reduction"] = image
 
-    image = gaussian_amplification(image, axis=0, sigma=0.4, mu=0.5, A=5, invert=True)
+    image = gaussian_amplification(image, axis=0, spread=0.3, centre=0.5, amplitude=3, invert=True)
     images["central_brightening"] = image
 
     # image = random_noise(image, intensity=0.01, frequency=0.3)
@@ -50,8 +50,11 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     # image = rician_noise(image, sigma=0.01)
     # images["rician_noise"] = image
     
-    image = rician_edge_noise(image, axis=axis, sigma=0.3, edge_strength=0.1)
+    image = rician_edge_noise(image, axis=axis, base_noise=0.3, edge_strength=0.1)
     images["rician_edge_noise"] = image
+
+    kspace = convert_to_kspace(image)
+    kspaces["image_manipulation"] = kspace
 
     if visualize:
         if slice is None:

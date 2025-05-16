@@ -78,9 +78,9 @@ def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
     return gaussian
 
 # This function magnifies the brightness/intensity of a volume such that the center of each image slice is magnified greater than the edges.
-def gaussian_amplification(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+def gaussian_amplification(volume, axis, spread=0.5, centre=0.0, amplitude=20, invert=False):
     # Create a Gaussian map
-    mask = gaussian(volume, axis, sigma=sigma, mu=mu, A=A, invert=invert)
+    mask = gaussian(volume, axis, sigma=spread, mu=centre, A=amplitude, invert=invert)
     return volume * mask
 
 # This function adds random noise to an image with a specified intensity and frequency.
@@ -95,9 +95,9 @@ def random_noise(image, key=42, intensity=0.1, frequency=0.1):
     return image + noise
 
 # This function applies noise gradually at a greater intensity to the edges of the image.
-def rician_edge_noise(image, axis=2, sigma=0.4, key=42, edge_strength=0.1):
-    gaussian_mask = gaussian(image, axis=axis, sigma=sigma, mu=0.5, A=1, invert=True)
-    sigma_map = sigma * edge_strength * gaussian_mask
+def rician_edge_noise(image, axis=2, base_noise=0.4, key=42, edge_strength=0.1):
+    gaussian_mask = gaussian(image, axis=axis, sigma=base_noise, mu=0.5, A=1, invert=True)
+    sigma_map = base_noise * edge_strength * gaussian_mask
     noisy_image = rician_noise(image, sigma_map, key=key)
     return noisy_image
 
@@ -106,12 +106,12 @@ def physiological_noise():
     pass
 
 # This function adds Rician noise to the image.
-def rician_noise(image, sigma, key=42):
+def rician_noise(image, base_noise, key=42):
     key_obj = random.PRNGKey(key)
     key_real, key_imag = random.split(key_obj)
 
-    noise_real = random.normal(key_real, shape=image.shape) * sigma
-    noise_imag = random.normal(key_imag, shape=image.shape) * sigma
+    noise_real = random.normal(key_real, shape=image.shape) * base_noise
+    noise_imag = random.normal(key_imag, shape=image.shape) * base_noise
     noisy_complex = image + noise_real + 1j * noise_imag
     noisy_image = jnp.abs(noisy_complex)
     return noisy_image
