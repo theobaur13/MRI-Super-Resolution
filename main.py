@@ -31,12 +31,19 @@ if __name__ == "__main__":
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
     # Subparser for analysing noise
-    # > py main.py analyse-noise --dataset "ADNI" --axis 2 
-    # > py main.py analyse-noise --dataset "BraTS" --axis 2 
-    analyse_noise_parser = subparsers.add_parser("analyse-noise", help="Analyse noise in data")
+    # > py main.py analyse-snr-avg --dataset "ADNI" --axis 2
+    # > py main.py analyse-snr-avg --dataset "BraTS" --axis 2
+    analyse_noise_parser = subparsers.add_parser("analyse-snr-avg", help="Analyse noise in data")
     analyse_noise_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
     analyse_noise_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
-    analyse_noise_parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
+
+    # Subparser for analysing SNR map
+    # > py main.py analyse-snr-map --dataset "ADNI" --axis 2 --slice 24
+    # > py main.py analyse-snr-map --dataset "BraTS" --axis 2 --slice 65
+    analyse_snr_map_parser = subparsers.add_parser("analyse-snr-map", help="Analyse SNR map in data")
+    analyse_snr_map_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
+    analyse_snr_map_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    analyse_snr_map_parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
 
     # Subparser for analysing brightness
     # > py main.py analyse-brightness --dataset "ADNI" --slice 24 --axis 2
@@ -44,6 +51,7 @@ if __name__ == "__main__":
     analyse_brightness_parser = subparsers.add_parser("analyse-brightness", help="Analyse brightness in data")
     analyse_brightness_parser.add_argument("--dataset", type=str, required=True, help="Dataset for analysis (e.g., 'ADNI', 'BraTS')")
     analyse_brightness_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
+    analyse_brightness_parser.add_argument("--slice", type=int, default=24, help="Slice index for analysis")
 
     # Subparser for batch conversion
     # > py main.py batch-convert --seq "t1c" --brats_dataset "BraSyn" --output_dir "data/BraTS_output"
@@ -73,7 +81,7 @@ if __name__ == "__main__":
         simulate(args, base_dir)
 
     # Perform analysis between two types of scans
-    elif action == "analyse-noise" or action == "analyse-brightness":
+    elif action == "analyse-snr-avg" or action == "analyse-brightness" or action == "analyse-snr-map":
         analyse(args, base_dir)
 
     # Apply degradation to BraTS scans

@@ -8,7 +8,7 @@ from src.pipeline import simluation_pipeline
 from src.conversions import convert_to_kspace
 from src.readwrite import read_nifti, write_nifti
 from src.display import display_img, display_3d
-from src.analysis import compare_snr, generate_brightness_mask, generate_snr_map
+from src.analysis import compare_snr, generate_brightness_map, generate_snr_map
 from src.slicing import slice_nifti
 from src.utils import get_adni_paths, get_matching_adni_scan, get_brats_paths
 
@@ -82,7 +82,7 @@ def analyse(args, base_dir):
         paths_3T = [os.path.join(ADNI_nifti_dir, "3T", p) for p in paths_3T]
 
     elif datset == "brats":
-        brats_dir = os.path.join(base_dir, "data", "BraTS_NifTIs")
+        brats_dir = os.path.join(base_dir, "data", "data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000")
         shape = (240, 240, 155)
         train_paths, validate_paths = get_brats_paths(brats_dir, "t2f", "BraSyn")
         paths_1_5T = train_paths + validate_paths  # Placeholder pairing
@@ -93,38 +93,52 @@ def analyse(args, base_dir):
     niftis_3T = [read_nifti(path) for path in tqdm(paths_3T)]
 
     # Compare SNR at each slice between 1.5T and 3T scans
-    if action == "analyse-noise":
+    if action == "analyse-snr-avg":
         # Allocate hypervolumes
         hypervolume_1_5T = np.zeros((len(niftis_1_5T), *shape))
-        for i, nifti in enumerate(niftis_1_5T):
+        for i, nifti in tqdm(enumerate(niftis_1_5T)):
             hypervolume_1_5T[i] = jnp.array(nifti.get_fdata())[0:shape[0], 0:shape[1], 0:shape[2]]
         
         hypervolume_3T = np.zeros((len(niftis_3T), *shape))
-        for i, nifti in enumerate(niftis_3T):
+        for i, nifti in tqdm(enumerate(niftis_3T)):
             hypervolume_3T[i] = jnp.array(nifti.get_fdata())[0:shape[0], 0:shape[1], 0:shape[2]]
 
         compare_snr(hypervolume_1_5T, hypervolume_3T, axis)
 
-        # TODO: Create SNR map for given slice.
-        generate_snr_map()
-
     # Compare brightness at a certain point on certain axis between 1.5T and 3T scans
-    elif action == "analyse-brightness":
+    elif action == "analyse-brightness" or action == "analyse-snr-map":
         slice_idx = args.slice
         
         slices_1_5T = []
-        for nifti in niftis_1_5T:
+        for nifti in tqdm(niftis_1_5T):
             slice = slice_nifti(nifti, slice_idx, axis)
             slices_1_5T.append(slice)
 
         slices_3T = []
-        for nifti in niftis_3T:
+        for nifti in tqdm(niftis_3T):
             slice = slice_nifti(nifti, slice_idx, axis)
             slices_3T.append(slice)
 
         slices_1_5T = jnp.array(slices_1_5T)
         slices_3T = jnp.array(slices_3T)
-        generate_brightness_mask(slices_1_5T, slices_3T, axis=axis, sigma=20, lim=0.6)
+
+        if action == "analyse-brightness":
+            generate_brightness_map(slices_3T, slices_1_5T)
+            
+        elif action == "analyse-snr-map":
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 10))
+
+            map_1_5T = generate_snr_map(slices_1_5T)
+            map_3T = generate_snr_map(slices_3T)
+
+            im1 = ax1.imshow(map_1_5T, cmap="plasma")
+            im2 = ax2.imshow(map_3T, cmap="plasma")
+
+            ax1.set_title("SNR Map 1.5T")
+            ax2.set_title("SNR Map 3T")
+            fig.colorbar(im1, ax=ax1)
+            fig.colorbar(im2, ax=ax2)
+            plt.tight_layout()
 
     plt.show()
 

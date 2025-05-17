@@ -4,44 +4,37 @@ import scipy.ndimage as ndimage
 import numpy as np
 from tqdm import tqdm
 from src.conversions import jax_to_numpy, numpy_to_jax
-from src.display import plot_surface
 
 # Function to generate and display a brightness mask for a given slice in two hypervolumes
-def generate_brightness_mask(slices_1, slices_2, axis, sigma=5, lim=0):
-    if axis == 2:
-        slice_axis = 0
-    elif axis == 1:
-        slice_axis = 2
-    elif axis == 0:
-        slice_axis = 1
+def generate_brightness_map(slices_1, slices_2, smoothing_factor=5):
 
     # Calculate mean intensity for each slice in the sets
-    intensity_slice_1 = jnp.mean(slices_1, axis=slice_axis)
-    intensity_slice_2 = jnp.mean(slices_2, axis=slice_axis)
+    intensity_slice_1 = jnp.mean(slices_1, axis=0)
+    intensity_slice_2 = jnp.mean(slices_2, axis=0)
 
     # Calculate the conversion mask
-    conversion_slice = intensity_slice_1 / intensity_slice_2
-    conversion_slice = jnp.clip(conversion_slice, 0, 1)  # Clip values to [0, 1] range
-    conversion_slice = ndimage.gaussian_filter(jax_to_numpy(conversion_slice), sigma=sigma)  # Smooth the mask
-    conversion_slice = numpy_to_jax(conversion_slice)  # Convert back to JAX array
+    conversion_slice = intensity_slice_1 / (intensity_slice_2 + 1e-8)
+    low, high = jnp.percentile(conversion_slice, 1), jnp.percentile(conversion_slice, 90)           # Clip as the outer edges are not relevant
+    conversion_slice = jnp.clip(conversion_slice, low, high)
+    conversion_slice = ndimage.gaussian_filter(jax_to_numpy(conversion_slice), smoothing_factor)    # Smooth the mask
 
-    fig = plt.figure(figsize=(15, 10))
-    ax1 = fig.add_subplot(1, 3, 1, projection='3d')
-    ax2 = fig.add_subplot(1, 3, 2, projection='3d')
-    ax3 = fig.add_subplot(1, 3, 3, projection='3d')
+    # Plot map
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 10))
+    im1 = ax1.imshow(np.abs(intensity_slice_1), cmap="plasma")
+    im2 = ax2.imshow(np.abs(intensity_slice_2), cmap="plasma")
+    im3 = ax3.imshow(np.abs(conversion_slice), cmap="plasma")
+    ax1.set_title("Slice 3T")
+    ax2.set_title("Slice 1.5T")
+    ax3.set_title("Conversion Mask")
+    fig.colorbar(im1, ax=ax1)
+    fig.colorbar(im2, ax=ax2)
+    fig.colorbar(im3, ax=ax3)
 
-    plot_surface(ax1, intensity_slice_1, cmap="plasma", limit=lim)
-    plot_surface(ax2, intensity_slice_2, cmap="plasma", limit=lim)
-    plot_surface(ax3, conversion_slice, cmap="inferno", limit=lim)
-    
-    ax1.set_title("Mean Intensity Image 1")
-    ax2.set_title("Mean Intensity Image 2")
-    ax3.set_title("Conversion Slice")
-    return conversion_slice
+    return numpy_to_jax(conversion_slice) 
 
 # Function to calculate and compare the Signal-to-Noise Ratio (SNR) for two hypervolumes
 def compare_snr(hypervolume_1_5T, hypervolume_3T, axis=0, x=30):
-    # Extract noise regions
+    # Extract top corner square of each 
     if axis == 0:
         noise_1_5T = hypervolume_1_5T[:, :, 15:x+15, 15:x+15]
         noise_3T = hypervolume_3T[:, :, 15:x+15, 15:x+15]
@@ -99,5 +92,10 @@ def compare_snr(hypervolume_1_5T, hypervolume_3T, axis=0, x=30):
     plt.legend()
     plt.show()
 
-def generate_snr_map():
-    pass
+# Calculate the average SNR of each pixel in a given slice across all samples
+def generate_snr_map(slices, x=50):
+    noise_patches = slices[:, :x, :x]
+    noise_std = jnp.std(noise_patches) 
+    signal_mean = jnp.mean(slices, axis=0)
+    snr_map = signal_mean / (noise_std + 1e-8)
+    return snr_map
