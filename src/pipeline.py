@@ -11,7 +11,6 @@ from src.conversions import (
 from src.transformations import (
     cylindrical_crop,
     gaussian_amplification,
-    random_noise,
     rician_noise,
     rician_edge_noise,
     partial_fourier
@@ -47,9 +46,6 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
 
     image = gaussian_amplification(image, axis=0, spread=0.3, centre=0.5, amplitude=3, invert=True)
     images["central_brightening"] = image
-
-    # image = random_noise(image, intensity=0.01, frequency=0.3)
-    # images["noise"] = image
 
     # image = rician_noise(image, sigma=0.01)
     # images["rician_noise"] = image

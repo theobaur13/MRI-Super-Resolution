@@ -84,17 +84,6 @@ def gaussian_amplification(volume, axis, spread=0.5, centre=0.0, amplitude=20, i
     mask = gaussian(volume, axis, sigma=spread, mu=centre, A=amplitude, invert=invert)
     return volume * mask
 
-# This function adds random noise to an image with a specified intensity and frequency.
-def random_noise(image, key=42, intensity=0.1, frequency=0.1):
-    key_obj = random.PRNGKey(key)
-    key_mask, key_noise = random.split(key_obj)
-
-    noise_mask = random.uniform(key_mask, shape=image.shape) < frequency
-    random_noise = random.uniform(key_noise, shape=image.shape, minval=-intensity, maxval=intensity)
-    noise = noise_mask * random_noise
-
-    return image + noise
-
 # This function applies noise gradually at a greater intensity to the edges of the image.
 def rician_edge_noise(image, axis=2, base_noise=0.4, key=42, edge_strength=0.1):
     gaussian_mask = gaussian(image, axis=axis, sigma=base_noise, mu=0.5, A=1, invert=True)
