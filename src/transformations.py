@@ -1,6 +1,5 @@
 import jax.numpy as jnp
 from jax import random
-from jax import lax
 
 # This function performs random undersampling in k-space by randomly selecting a fraction of the data points to keep.
 def random_undersampling(kspace, factor=1.2, seed=42):
@@ -10,13 +9,18 @@ def random_undersampling(kspace, factor=1.2, seed=42):
     return kspace * mask
 
 # This function performs undersampling in k-space by keeping every x-th line along the specified axis.
-def cartesian_undersampling(kspace, axis, factor=3):
+def cartesian_undersampling(kspace, axis, width=10):
     # Create a mask that keeps every x-th line along the specified axis
     mask = jnp.ones(kspace.shape)
-    slices = [slice(None)] * 3
-    slices[(axis + 1) % 3] = slice(None, None, factor)  # Slice every x-th line
-    
-    mask[tuple(slices)] = 0
+    target_axis = (axis + 1) % 3
+
+    for i in range(kspace.shape[target_axis]):
+        if i % width == 0:
+            mask = mask.at[(slice(None),) * target_axis + (i,)].set(0)
+        else:
+            mask = mask.at[(slice(None),) * target_axis + (i,)].set(1)
+    mask = mask.astype(kspace.dtype)
+
     return kspace * mask
 
 # This function creates a cylindrical mask in k-space, keeping only the center of the k-space.
@@ -39,7 +43,7 @@ def cylindrical_crop(kspace, axis, factor=0.5):
     return kspace * mask
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
-def variable_density_undersampling(kspace, factor=1.1, ks=30, seed=42):
+def variable_density_undersampling(kspace, factor=1.05, ks=30, seed=42):
     key = random.PRNGKey(seed)
 
     # Chance of sampling a line is inversely proportional to its distance from the center
@@ -61,7 +65,7 @@ def variable_density_undersampling(kspace, factor=1.1, ks=30, seed=42):
 
     return kspace * mask
 
-def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
+def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20):
     # sigma: standard deviation of the Gaussian
     # mu: mean of the Gaussian
     # A: amplitude of the Gaussian
@@ -71,8 +75,6 @@ def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
     X, Y, Z = jnp.meshgrid(*coords, indexing='ij')
 
     gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
-    if invert:
-        gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / -(2 * sigma ** 2))
 
     inverse_permutation = jnp.argsort(jnp.array([axis, (axis + 1) % 3, (axis + 2) % 3]))
     gaussian = jnp.transpose(gaussian, axes=tuple(inverse_permutation))
@@ -81,12 +83,18 @@ def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20, invert=False):
 # This function magnifies the brightness/intensity of a volume such that the center of each image slice is magnified greater than the edges.
 def gaussian_amplification(volume, axis, spread=0.5, centre=0.0, amplitude=20, invert=False):
     # Create a Gaussian map
-    mask = gaussian(volume, axis, sigma=spread, mu=centre, A=amplitude, invert=invert)
+    mask = gaussian(volume, axis, sigma=spread, mu=centre, A=amplitude)
+    
+    if invert:
+        mask = 1.0 - mask
+    else:
+        mask = 1.0 + mask
     return volume * mask
 
 # This function applies noise gradually at a greater intensity to the edges of the image.
-def rician_edge_noise(image, axis=2, base_noise=0.4, key=42, edge_strength=0.1):
-    gaussian_mask = gaussian(image, axis=axis, sigma=base_noise, mu=0.5, A=1, invert=True)
+def rician_edge_noise(image, axis=2, base_noise=0.4, edge_strength=0.1, key=42):
+    gaussian_mask = gaussian(image, axis=axis, sigma=0.4, mu=0.5, A=1)
+    gaussian_mask = 1.0 - gaussian_mask  # Invert the Gaussian mask
     sigma_map = base_noise * edge_strength * gaussian_mask
     noisy_image = rician_noise(image, sigma_map, key=key)
     return noisy_image

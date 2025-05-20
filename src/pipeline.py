@@ -9,6 +9,7 @@ from src.conversions import (
     numpy_to_jax
 )
 from src.transformations import (
+    variable_density_undersampling,
     cylindrical_crop,
     gaussian_amplification,
     rician_noise,
@@ -28,11 +29,14 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     kspaces = {"original": kspace}
 
     # k-space manipulation
+    kspace = variable_density_undersampling(kspace)
+    kspaces["variable_density_undersampling"] = kspace
+
     kspace = cylindrical_crop(kspace, axis=axis, factor=0.7)
     kspaces["cylindrical_crop"] = kspace
 
-    kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=2)
-    kspaces["gaussian_amplification"] = kspace
+    # kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=2)
+    # kspaces["gaussian_amplification"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
     kspaces["partial_fourier"] = kspace
@@ -44,13 +48,13 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     # image = numpy_to_jax(gibbs_removal(jax_to_numpy(image), slice_axis=axis))
     # images["gibbs_reduction"] = image
 
-    image = gaussian_amplification(image, axis=0, spread=0.3, centre=0.5, amplitude=3, invert=True)
+    image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.8, invert=True)
     images["central_brightening"] = image
 
-    # image = rician_noise(image, sigma=0.01)
+    # image = rician_noise(image, base_noise=0.01)
     # images["rician_noise"] = image
     
-    image = rician_edge_noise(image, axis=axis, base_noise=0.3, edge_strength=0.1)
+    image = rician_edge_noise(image, axis=axis, base_noise=0.1, edge_strength=0.1)
     images["rician_edge_noise"] = image
 
     if visualize:
