@@ -48,22 +48,34 @@ def simulate(args, base_dir):
     axis = args.axis
     slice_idx = args.slice
     arg_path = args.path
+    compare = args.compare
     path = os.path.join(base_dir, arg_path)
 
-    path_1_5T, path_3T = get_matching_adni_scan(path)
+    if compare:
+        # Get the matching 1.5T and 3T scans
+        path_1_5T, path_3T = get_matching_adni_scan(path)
+        nifti_1_5T = read_nifti(path_1_5T)
+    else:
+        path_3T = path
     
-    nifti_1_5T = read_nifti(path_1_5T)
     nifti_3T = read_nifti(path_3T)
 
     simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis=axis, visualize=True, slice=slice_idx)
 
-    # Display the target vs simulated image
-    display_img([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 1.5T Image", "Simulated 1.5T Image"])
+    if compare:
+        # Display the target vs simulated image
+        display_img([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 1.5T Image", "Simulated 1.5T Image"])
+        
+        # Display the target vs simulated k-space
+        original_volume = jnp.array(nifti_1_5T.get_fdata())
+        original_kspace = convert_to_kspace(original_volume)
+        display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Target 1.5T k-Space", "Simulated 1.5T k-Space"])
+    else:
+        # Display the simulated image
+        display_img([simulated_nifti], slice=slice_idx, axis=axis, titles=["Simulated 1.5T Image"])
 
-    # Display the target vs simulated k-space
-    original_volume = jnp.array(nifti_1_5T.get_fdata())
-    original_kspace = convert_to_kspace(original_volume)
-    display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Target 1.5T k-Space", "Simulated 1.5T k-Space"])
+        # Display the k-space
+        display_3d([simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Simulated 1.5T k-Space"])      
     plt.show()
 
 def analyse(args, base_dir):

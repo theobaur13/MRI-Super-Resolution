@@ -23,11 +23,13 @@ if __name__ == "__main__":
     convert_parser.add_argument("--ADNI_nifti_dir", type=str, help="Path to ADNI NIfTI directory")
 
     # Subparser for simulating data
-    # > py main.py simulate --path "data/ADNI_NIfTIs/3T/ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24
+    # > py main.py simulate --path "data/ADNI_NIfTIs/3T/ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24 --compare True
+    # > py main.py simulate --path "data/data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000/BraSyn/train/BraTS-GLI-00000-000/BraTS-GLI-00000-000-t2f.nii.gz" --axis 2 --slice 65
     simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
     simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
     simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
+    simulate_parser.add_argument("--compare", type=bool, default=False, help="Whether to compare with original data (only for ADNI)")
 
     # Subparser for analysing noise
     # > py main.py analyse-snr-avg --dataset "ADNI" --axis 2
