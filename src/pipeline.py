@@ -13,7 +13,8 @@ from src.transformations import (
     gaussian_amplification,
     random_noise,
     rician_noise,
-    rician_edge_noise
+    rician_edge_noise,
+    partial_fourier
 )
 
 from src.gibbs_removal import gibbs_removal
@@ -33,6 +34,9 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
 
     kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=2)
     kspaces["gaussian_amplification"] = kspace
+
+    kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
+    kspaces["partial_fourier"] = kspace
     
     # Image manipulation
     image = convert_to_image(kspace)
@@ -52,9 +56,6 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     
     image = rician_edge_noise(image, axis=axis, base_noise=0.3, edge_strength=0.1)
     images["rician_edge_noise"] = image
-
-    kspace = convert_to_kspace(image)
-    kspaces["image_manipulation"] = kspace
 
     if visualize:
         if slice is None:

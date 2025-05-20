@@ -17,7 +17,6 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     # Subparser for converting ADNI data
-    # > py main.py convert-adni
     # > py main.py convert-adni --ADNI_dir "data/ADNI" --ADNI_nifti_dir "data/ADNI_NIfTIs"
     convert_parser = subparsers.add_parser("convert-adni", help="Convert ADNI data to NIfTI format")
     convert_parser.add_argument("--ADNI_dir", type=str, help="Path to ADNI directory")

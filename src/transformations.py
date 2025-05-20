@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 from jax import random
+from jax import lax
 
 # This function performs random undersampling in k-space by randomly selecting a fraction of the data points to keep.
 def random_undersampling(kspace, factor=1.2, seed=42):
@@ -116,13 +117,23 @@ def rician_noise(image, base_noise, key=42):
     noisy_image = jnp.abs(noisy_complex)
     return noisy_image
 
-# TODO: This function adds Coil Sensitivity-Driven Noise to the image.
-def coil_sensitivity_noise():
-    pass
+def partial_fourier(kspace, axis, fraction=0.625, phase_correction=None):
+    # Truncation
+    target_axis = (axis + 1) % 3
+    N = kspace.shape[target_axis]
+    remove = N - int(jnp.floor(N * fraction))
+    mask = jnp.zeros(kspace.shape)
+    mask = mask.at[(slice(None),) * target_axis + (slice(remove, N),)].set(1)
 
-# TODO: Monte Carlo k-space Corruption.
-def monte_carlo_kspace_corruption():
-    pass
+    if phase_correction == "homodyne":
+        # TODO: Implement homodyne phase correction
+        pass
+    
+    elif phase_correction == "PCOS":
+        # TODO: Implement PCOS phase correction
+        pass
+
+    return kspace * mask
 
 # TODO: Grey-white matter boundary contrast reduction.
 def grey_white_matter_boundary_contrast_reduction():
