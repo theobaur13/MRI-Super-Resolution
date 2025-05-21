@@ -29,14 +29,15 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     kspaces = {"original": kspace}
 
     # k-space manipulation
+
+    # kspace = cylindrical_crop(kspace, axis=axis, factor=0.7)
+    # kspaces["cylindrical_crop"] = kspace
+
+    kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
+    kspaces["gaussian_amplification"] = kspace
+
     kspace = variable_density_undersampling(kspace)
     kspaces["variable_density_undersampling"] = kspace
-
-    kspace = cylindrical_crop(kspace, axis=axis, factor=0.7)
-    kspaces["cylindrical_crop"] = kspace
-
-    # kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=2)
-    # kspaces["gaussian_amplification"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
     kspaces["partial_fourier"] = kspace

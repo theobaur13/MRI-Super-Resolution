@@ -71,11 +71,13 @@ def simulate(args, base_dir):
         original_kspace = convert_to_kspace(original_volume)
         display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Target 1.5T k-Space", "Simulated 1.5T k-Space"])
     else:
+        original_kspace = convert_to_kspace(nifti_3T.get_fdata())
+
         # Display the simulated image
-        display_img([simulated_nifti], slice=slice_idx, axis=axis, titles=["Simulated 1.5T Image"])
+        display_img([nifti_3T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 3T Image", "Simulated 1.5T Image"])
 
         # Display the k-space
-        display_3d([simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Simulated 1.5T k-Space"])      
+        display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Original 3T k-Space", "Simulated 1.5T k-Space"])      
     plt.show()
 
 def analyse(args, base_dir):
