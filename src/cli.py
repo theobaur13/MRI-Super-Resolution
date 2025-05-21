@@ -12,9 +12,9 @@ from src.analysis import compare_snr, generate_brightness_map, generate_snr_map
 from src.slicing import slice_nifti
 from src.utils import get_adni_paths, get_matching_adni_scan, get_brats_paths
 
-def convert_adni(args, base_dir):
-    ADNI_dir = os.path.join(base_dir, args.ADNI_dir)
-    output_dir = os.path.join(base_dir, args.ADNI_nifti_dir)
+def convert_adni(args):
+    ADNI_dir = args.ADNI_dir
+    output_dir = args.ADNI_nifti_dir
 
     t1_5_paths, t3_paths = get_adni_paths(ADNI_dir)
 
@@ -43,13 +43,12 @@ def convert_adni(args, base_dir):
     process(t1_5_paths, os.path.join(output_dir, "1.5T"))
     process(t3_paths, os.path.join(output_dir, "3T"))
 
-def simulate(args, base_dir):
+def simulate(args):
     # Arguments
     axis = args.axis
     slice_idx = args.slice
-    arg_path = args.path
+    path = args.path
     compare = args.compare
-    path = os.path.join(base_dir, arg_path)
 
     if compare:
         # Get the matching 1.5T and 3T scans
@@ -80,25 +79,25 @@ def simulate(args, base_dir):
         display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Original 3T k-Space", "Simulated 1.5T k-Space"])      
     plt.show()
 
-def analyse(args, base_dir):
+def analyse(args):
     # Arguments
     action = args.action.lower()
     axis = args.axis
-    datset = args.dataset.lower()
+    dataset_dir = args.dataset_dir
 
     # Sort out paths for ADNI and BraTS
-    if datset == "adni":
-        ADNI_nifti_dir = os.path.join(base_dir, "data", "ADNI_NIfTIs")
+    if "adni" in dataset_dir.lower():
         shape = (256, 256, 44)
-        paths_1_5T = sorted(os.listdir(os.path.join(ADNI_nifti_dir, "1.5T")))
-        paths_3T = sorted(os.listdir(os.path.join(ADNI_nifti_dir, "3T")))
-        paths_1_5T = [os.path.join(ADNI_nifti_dir, "1.5T", p) for p in paths_1_5T]
-        paths_3T = [os.path.join(ADNI_nifti_dir, "3T", p) for p in paths_3T]
+        paths_1_5T = sorted(os.listdir(os.path.join(dataset_dir, "1.5T")))
+        paths_3T = sorted(os.listdir(os.path.join(dataset_dir, "3T")))
+        paths_1_5T = [os.path.join(dataset_dir, "1.5T", p) for p in paths_1_5T]
+        paths_3T = [os.path.join(dataset_dir, "3T", p) for p in paths_3T]
 
-    elif datset == "brats":
-        brats_dir = os.path.join(base_dir, "data", "data-brats-2024-master-BraSyn-train-BraTS-GLI-00000-000")
+    elif "brats" in dataset_dir.lower():
+        dataset = args.dataset
+        seq = args.seq
         shape = (240, 240, 155)
-        train_paths, validate_paths = get_brats_paths(brats_dir, "t2f", "BraSyn")
+        train_paths, validate_paths = get_brats_paths(dataset_dir, seq, dataset)
         paths_1_5T = train_paths + validate_paths  # Placeholder pairing
         paths_3T = train_paths + validate_paths
 
@@ -156,15 +155,13 @@ def analyse(args, base_dir):
 
     plt.show()
 
-def batch_convert(args, base_dir):
+def batch_convert(args):
     # Arguments
-    seq = args.seq                                          # t1c, t1n, t2f, t2w
-    dataset = args.brats_dataset                            # BraSyn, GLI
-    output_dir = os.path.join(base_dir, args.output_dir)    # Output directory for converted data
-    brats_dir = os.path.join(base_dir, "data", "BraTS_NifTIs", dataset)  # Path to BraTS dataset
+    brats_dir = args.brats_dir                              # Path to BraTS directory
+    output_dir = args.output_dir                            # Output directory for converted data
 
     os.makedirs(output_dir, exist_ok=True)
-    paths, validate_paths = get_brats_paths(brats_dir, seq, dataset)
+    paths, validate_paths = get_brats_paths(brats_dir)
 
     axis = 0
     for path in tqdm(paths):
@@ -172,10 +169,7 @@ def batch_convert(args, base_dir):
         simulated_nifti, _ = simluation_pipeline(nifti, axis=axis)
         write_nifti(simulated_nifti, os.path.join(output_dir, os.path.basename(path)))
 
-def view(args, base_dir):
-    relative_path = args.path
-    absolute_path = os.path.join(base_dir, relative_path)
-
-    nifti = read_nifti(absolute_path)
+def view(args):
+    nifti = read_nifti(args.path)
     display_img([nifti], slice=args.slice, axis=args.axis)
     plt.show()

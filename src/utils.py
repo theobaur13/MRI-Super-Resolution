@@ -77,14 +77,33 @@ def get_matching_adni_scan(path):
             print(f"No matching image found in {target_strengh} directory for {image}")
             return None
 
-def get_brats_paths(data_dir, seq, dataset=None):
-    datasets = [dataset] if dataset else ["BraSyn", "GLI"]
+# TODO: Make it so that dataset is optional, and if not provided, it will return all sequences and datasets
+def get_brats_paths(data_dir, seq=None, dataset=None):
+    datasets = [dataset] if dataset else ["BraSyn", "GLI", "GoAT", "LocalInpainting", "MEN-RT", "MET", "PED", "SSA"]
     train_paths, validate_paths = [], []
 
-    for dset in datasets:
-        for split, paths in [("train", train_paths), ("validate", validate_paths)]:
-            dir_path = os.path.join(data_dir, dset, split)
-            paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
+    for dataset in datasets:
+        sequences = [seq] if seq else ["t1c", "t1n", "t2f", "t2w"]
+        if dataset in ["BraSyn", "GLI", "MET", "PED"]:
+            for split, paths in [("train", train_paths), ("validate", validate_paths)]:
+                dir_path = os.path.join(data_dir, dataset, split)
+                paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
+        elif dataset == "GoAT":
+            for split, paths in [("train-WithOutGroundTruth", train_paths), ("validate", validate_paths)]:
+                dir_path = os.path.join(data_dir, dataset, split)
+                paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
+        elif dataset == "LocalInpainting":
+            seq = "t1n"
+            dir_path = os.path.join(data_dir, dataset, "train")
+            train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
+        elif dataset == "MEN-RT":
+            seq = "t1c"
+            for split, paths in [("train", train_paths), ("validate", validate_paths)]:
+                dir_path = os.path.join(data_dir, dataset, split)
+                paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
+        elif dataset == "SSA":
+            dir_path = os.path.join(data_dir, dataset, "train")
+            train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
 
     return train_paths, validate_paths
 
