@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -180,3 +181,17 @@ def view(args):
     nifti = read_nifti(args.path)
     display_img([nifti], slice=args.slice, axis=args.axis)
     plt.show()
+
+def segment():
+    flywheel_dir = os.path.join(os.getcwd(), "flywheel", "v0")
+    input_dir = os.path.join(flywheel_dir, "input")
+    output_dir = os.path.join(flywheel_dir, "output")
+    config_path = os.path.join(flywheel_dir, "config.json")
+
+    subprocess.run([
+        "docker", "run", "--rm",
+        "-v", f"{config_path}:/flywheel/v0/config.json",
+        "-v", f"{input_dir}:/flywheel/v0/input",
+        "-v", f"{output_dir}:/flywheel/v0/output",
+        "scitran/fsl-fast",
+    ])

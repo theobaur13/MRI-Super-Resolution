@@ -3,5 +3,9 @@ __pycache__
 *.pyc
 data
 test.py
-output
+model
 figures
+flywheel/v0/input/nifti/*
+flywheel/v0/output/*
+!flywheel/v0/input/nifti/.gitkeep
+!flywheel/v0/output/.gitkeep

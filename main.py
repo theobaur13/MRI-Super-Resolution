@@ -5,7 +5,8 @@ from src.cli import (
     simulate,
     analyse,
     batch_simulate,
-    view
+    view,
+    segment
 )
 
 if __name__ == "__main__":
@@ -73,6 +74,10 @@ if __name__ == "__main__":
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
     view_parser.add_argument("--axis", type=int, default=0, help="Axis for viewing")
     
+    # Subparser for segmenting data
+    # py main.py segment
+    segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
+
     args = parser.parse_args()
     action = args.action.lower()
 
@@ -95,3 +100,7 @@ if __name__ == "__main__":
     # View a slice of a NIfTI file
     elif action == "view":
         view(args)
+
+    # Segment a NIfTI file into white matter, grey matter, and CSF
+    elif action =="segment":
+        segment()

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "mixel": 0.3,
+    "fHard": 0.02,
+    "Hyper": 0.1,
+    "init": 15,
+    "fixed": 4,
+    "lowpass": 20,
+    "iterations": 4,
+    "image_type": 1,
+    "tissue_classes": 3,
+    "channels": 1,
+    "nobias": false,
+    "nopve": false,
+    "segments": true,
+    "bias_field": false,
+    "restored_image": false
+  }
+}
