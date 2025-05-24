@@ -124,5 +124,4 @@ def get_adni_paths(data_dir):
                 for visit in os.listdir(visit_dir):
                     for image_dir in os.listdir(os.path.join(visit_dir, visit)):
                         t3.append(os.path.join(visit_dir, visit, image_dir))
-                        
     return t1_5, t3

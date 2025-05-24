@@ -43,7 +43,7 @@ def cylindrical_crop(kspace, axis, factor=0.5):
     return kspace * mask
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
-def variable_density_undersampling(kspace, factor=1.05, ks=30, seed=42):
+def variable_density_undersampling(kspace, factor=1.05, harshness=2, seed=42):
     key = random.PRNGKey(seed)
 
     # Chance of sampling a line is inversely proportional to its distance from the center
@@ -55,7 +55,7 @@ def variable_density_undersampling(kspace, factor=1.05, ks=30, seed=42):
     distances = distances / jnp.max(distances)
 
     # Sigmoid function
-    distances = 1 / (1 + jnp.exp(-ks * (distances - 0.5)))
+    distances = 1 / (1 + jnp.exp(-harshness * (distances - 0.5)))
 
     # Flatten
     probabilities = 1 - distances

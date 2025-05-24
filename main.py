@@ -4,7 +4,7 @@ from src.cli import (
     convert_adni,
     simulate,
     analyse,
-    batch_convert,
+    batch_simulate,
     view
 )
 
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     analyse_brightness_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
     analyse_brightness_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
-    # Subparser for batch conversion
-    # > py main.py batch-convert --brats_dir "D:\data-brats-2024" --output_dir "D:\BraTS_output"
-    batch_convert_parser = subparsers.add_parser("batch-convert", help="Batch convert data")
+    # Subparser for batch simulation
+    # > py main.py batch-simulate --brats_dir "D:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated"
+    batch_convert_parser = subparsers.add_parser("batch-simulate", help="Simulate data in batch")
     batch_convert_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
     batch_convert_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
 
@@ -89,8 +89,8 @@ if __name__ == "__main__":
         analyse(args)
 
     # Apply degradation to BraTS scans
-    elif action == "batch-convert":
-        batch_convert(args)
+    elif action == "batch-simulate":
+        batch_simulate(args)
 
     # View a slice of a NIfTI file
     elif action == "view":

@@ -144,8 +144,15 @@ def analyse(args):
             map_1_5T = generate_snr_map(slices_1_5T)
             map_3T = generate_snr_map(slices_3T)
 
+            # Display the SNR maps
             im1 = ax1.imshow(map_1_5T, cmap="plasma")
             im2 = ax2.imshow(map_3T, cmap="plasma")
+
+            minimum = min(np.min(map_1_5T), np.min(map_3T))
+            maximum = max(np.max(map_1_5T), np.max(map_3T))
+
+            im1.set_clim(minimum, maximum)
+            im2.set_clim(minimum, maximum)
 
             ax1.set_title("SNR Map 1.5T")
             ax2.set_title("SNR Map 3T")
@@ -155,7 +162,7 @@ def analyse(args):
 
     plt.show()
 
-def batch_convert(args):
+def batch_simulate(args):
     # Arguments
     brats_dir = args.brats_dir                              # Path to BraTS directory
     output_dir = args.output_dir                            # Output directory for converted data
