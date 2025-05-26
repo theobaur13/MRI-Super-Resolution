@@ -14,28 +14,29 @@ from src.transformations import (
     gaussian_amplification,
     rician_noise,
     rician_edge_noise,
-    partial_fourier
+    partial_fourier,
+    matter_contrast
 )
 
 from src.gibbs_removal import gibbs_removal
 
-def simluation_pipeline(nifti, axis, visualize=False, slice=None):
-    # Degrade 3T scans to resemble 1.5T scans
+# Degrade 3T scans to resemble 1.5T scans
+def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
+    # Image manipulation
     image = jnp.array(nifti.get_fdata())
-    kspace = convert_to_kspace(image)
-
-    # Create dictionaries to store volumes and k-space data
     images = {"original": image}
-    kspaces = {"original": kspace}
+
+    image = matter_contrast(image, path)
+    images["matter_contrast"] = image
 
     # k-space manipulation
-    # kspace = cylindrical_crop(kspace, axis=axis, factor=0.7)
-    # kspaces["cylindrical_crop"] = kspace
+    kspace = convert_to_kspace(image)
+    kspaces = {"original": kspace}
 
     kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
     kspaces["gaussian_amplification"] = kspace
 
-    kspace = variable_density_undersampling(kspace, factor=1.05, harshness=10)
+    kspace = variable_density_undersampling(kspace, factor=1.05, softness=30)
     kspaces["variable_density_undersampling"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
@@ -45,14 +46,8 @@ def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     image = convert_to_image(kspace)
     images["k_space_manipulation"] = image
 
-    # image = numpy_to_jax(gibbs_removal(jax_to_numpy(image), slice_axis=axis))
-    # images["gibbs_reduction"] = image
-
     image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.8, invert=True)
     images["central_brightening"] = image
-
-    # image = rician_noise(image, base_noise=0.01)
-    # images["rician_noise"] = image
     
     image = rician_edge_noise(image, axis=axis, base_noise=0.1, edge_strength=0.1)
     images["rician_edge_noise"] = image

@@ -125,3 +125,17 @@ def get_adni_paths(data_dir):
                     for image_dir in os.listdir(os.path.join(visit_dir, visit)):
                         t3.append(os.path.join(visit_dir, visit, image_dir))
     return t1_5, t3
+
+def get_seg_paths(path):
+    base_path = os.path.dirname(path)
+    file_name = os.path.basename(path)
+
+    split_name = file_name.split(".")
+    CSF_name = split_name[0] + "_fast_pve_0.nii.gz"
+    GM_name = split_name[0] + "_fast_pve_1.nii.gz"
+    WM_name = split_name[0] + "_fast_pve_2.nii.gz"
+    
+    CSF = os.path.join(base_path, CSF_name)
+    GM = os.path.join(base_path, GM_name)
+    WM = os.path.join(base_path, WM_name)
+    return CSF, GM, WM

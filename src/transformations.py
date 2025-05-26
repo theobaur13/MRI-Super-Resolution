@@ -1,5 +1,7 @@
 import jax.numpy as jnp
 from jax import random
+from src.utils import get_seg_paths
+from src.readwrite import read_nifti
 
 # This function performs random undersampling in k-space by randomly selecting a fraction of the data points to keep.
 def random_undersampling(kspace, factor=1.2, seed=42):
@@ -43,7 +45,7 @@ def cylindrical_crop(kspace, axis, factor=0.5):
     return kspace * mask
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
-def variable_density_undersampling(kspace, factor=1.05, harshness=2, seed=42):
+def variable_density_undersampling(kspace, factor=1.05, softness=2, seed=42):
     key = random.PRNGKey(seed)
 
     # Chance of sampling a line is inversely proportional to its distance from the center
@@ -55,7 +57,7 @@ def variable_density_undersampling(kspace, factor=1.05, harshness=2, seed=42):
     distances = distances / jnp.max(distances)
 
     # Sigmoid function
-    distances = 1 / (1 + jnp.exp(-harshness * (distances - 0.5)))
+    distances = 1 / (1 + jnp.exp(-softness * (distances - 0.5)))
 
     # Flatten
     probabilities = 1 - distances
@@ -132,6 +134,30 @@ def partial_fourier(kspace, axis, fraction=0.625, phase_correction=None):
 
     return kspace * mask
 
-# TODO: Grey-white matter boundary contrast reduction.
-def grey_white_matter_boundary_contrast_reduction():
-    pass
+# Adjust the contrast of the image in accordance to GM, WM, CSF.
+def matter_contrast(image, path, intensity=0.5):
+    csf_path, gm_path, wm_path = get_seg_paths(path)
+
+    # Read the segmentation files
+    csf_prob = read_nifti(csf_path).get_fdata()
+    gm_prob = read_nifti(gm_path).get_fdata()
+    wm_prob = read_nifti(wm_path).get_fdata()
+
+    gm_T1 = 1.62    # T1 relaxation time for grey matter is 62% longer at 3T than at 1.5T
+    wm_T1 = 1.42    # T1 relaxation time for white matter is 42% longer at 3T than at 1.5T
+    csf_T1 = 1.0
+
+    gm_scale = 1 / gm_T1
+    wm_scale = 1 / wm_T1
+    csf_scale = 1 / csf_T1
+
+    # Apply the scaling factors to the image
+    adjusted_image = (
+        image * gm_prob * gm_scale +
+        image * wm_prob * wm_scale +
+        image * csf_prob * csf_scale
+    )
+
+    image = (1 - intensity) * image + intensity * adjusted_image
+
+    return (image - jnp.min(image)) / (jnp.max(image) - jnp.min(image) + 1e-8)

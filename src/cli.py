@@ -61,7 +61,7 @@ def simulate(args):
     
     nifti_3T = read_nifti(path_3T)
 
-    simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis=axis, visualize=True, slice=slice_idx)
+    simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis, path, visualize=True, slice=slice_idx)
 
     if compare:
         # Display the target vs simulated image
@@ -184,7 +184,7 @@ def view(args):
     plt.show()
 
 def segment(args):
-    train_paths, _ = get_brats_paths(args.dataset_dir, args.seq)
+    paths, _ = get_brats_paths(args.dataset_dir, "t1n")
 
     flywheel_dir = os.path.join(os.getcwd(), "flywheel", "v0")
     flywheel_input_dir = os.path.join(flywheel_dir, "input", "nifti")
@@ -192,10 +192,10 @@ def segment(args):
     config_path = os.path.join(flywheel_dir, "config.json")
 
     for i in tqdm(range(args.limit)):
-        scan_path = train_paths[i]
+        scan_path = paths[i]
 
         shutil.copy(scan_path, flywheel_input_dir)
-        
+
         subprocess.run([
             "docker", "run", "--rm",
             "-v", f"{config_path}:/flywheel/v0/config.json",

@@ -79,7 +79,6 @@ if __name__ == "__main__":
     segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
     segment_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
-    segment_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
 
     args = parser.parse_args()
     action = args.action.lower()
