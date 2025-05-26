@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 import numpy as np
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -182,16 +183,33 @@ def view(args):
     display_img([nifti], slice=args.slice, axis=args.axis)
     plt.show()
 
-def segment():
+def segment(args):
+    train_paths, _ = get_brats_paths(args.dataset_dir, args.seq)
+
     flywheel_dir = os.path.join(os.getcwd(), "flywheel", "v0")
-    input_dir = os.path.join(flywheel_dir, "input")
-    output_dir = os.path.join(flywheel_dir, "output")
+    flywheel_input_dir = os.path.join(flywheel_dir, "input", "nifti")
+    flywheel_output_dir = os.path.join(flywheel_dir, "output")
     config_path = os.path.join(flywheel_dir, "config.json")
 
-    subprocess.run([
-        "docker", "run", "--rm",
-        "-v", f"{config_path}:/flywheel/v0/config.json",
-        "-v", f"{input_dir}:/flywheel/v0/input",
-        "-v", f"{output_dir}:/flywheel/v0/output",
-        "scitran/fsl-fast",
-    ])
+    for i in tqdm(range(args.limit)):
+        scan_path = train_paths[i]
+
+        shutil.copy(scan_path, flywheel_input_dir)
+        
+        subprocess.run([
+            "docker", "run", "--rm",
+            "-v", f"{config_path}:/flywheel/v0/config.json",
+            "-v", f"{flywheel_input_dir}:/flywheel/v0/input/nifti",
+            "-v", f"{flywheel_output_dir}:/flywheel/v0/output",
+            "scitran/fsl-fast",
+        ])
+
+        scan_dir = os.path.dirname(scan_path)
+        for file in os.listdir(flywheel_output_dir):
+            if file.endswith(".nii.gz"):
+                shutil.copy(os.path.join(flywheel_output_dir, file), os.path.join(scan_dir, file))
+
+        # Clear input and output directories
+        os.remove(os.path.join(flywheel_input_dir, os.path.basename(scan_path)))
+        for file in os.listdir(flywheel_output_dir):
+            os.remove(os.path.join(flywheel_output_dir, file))

@@ -75,8 +75,11 @@ if __name__ == "__main__":
     view_parser.add_argument("--axis", type=int, default=0, help="Axis for viewing")
     
     # Subparser for segmenting data
-    # py main.py segment
+    # py main.py segment --dataset_dir "D:\data-brats-2024" --limit 1
     segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
+    segment_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
+    segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
+    segment_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
 
     args = parser.parse_args()
     action = args.action.lower()
@@ -103,4 +106,4 @@ if __name__ == "__main__":
 
     # Segment a NIfTI file into white matter, grey matter, and CSF
     elif action =="segment":
-        segment()
+        segment(args)
