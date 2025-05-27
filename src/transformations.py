@@ -3,13 +3,6 @@ from jax import random
 from src.utils import get_seg_paths
 from src.readwrite import read_nifti
 
-# This function performs random undersampling in k-space by randomly selecting a fraction of the data points to keep.
-def random_undersampling(kspace, factor=1.2, seed=42):
-    key = random.PRNGKey(seed)
-    prob = 1 / factor
-    mask = random.bernoulli(key, p=prob, shape=kspace.shape)
-    return kspace * mask
-
 # This function performs undersampling in k-space by keeping every x-th line along the specified axis.
 def cartesian_undersampling(kspace, axis, width=10):
     # Create a mask that keeps every x-th line along the specified axis
@@ -25,24 +18,8 @@ def cartesian_undersampling(kspace, axis, width=10):
 
     return kspace * mask
 
-# This function creates a cylindrical mask in k-space, keeping only the center of the k-space.
-def cylindrical_crop(kspace, axis, factor=0.5):
-    radius = int((kspace.shape[(axis + 1) % 3] * factor) // 2)
-    radius = max(radius, 1)
-
-    # Create a mask that keeps only the center of the k-space, where the axis is the axis of slicing
-    mask = jnp.zeros(kspace.shape)
-    center = jnp.array(kspace.shape) // 2
-    Z, Y, X = jnp.indices(kspace.shape)
-
-    if axis == 0:       # Cylinder along the z-axis
-        mask = jnp.where(jnp.sqrt((X - center[2])**2 + (Y - center[1])**2) <= radius, 1, 0)
-    elif axis == 1:     # Cylinder along the y-axis
-        mask = jnp.where(jnp.sqrt((X - center[2])**2 + (Z - center[0])**2) <= radius, 1, 0)
-    elif axis == 2:     # Cylinder along the x-axis
-        mask = jnp.where(jnp.sqrt((Y - center[1])**2 + (Z - center[0])**2) <= radius, 1, 0)
-
-    return kspace * mask
+def radial_undersampling(kspace, axis, radius=100, spoke_num=100):
+    pass
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
 def variable_density_undersampling(kspace, density=0.5, steepness=20, seed=42):
@@ -64,6 +41,25 @@ def variable_density_undersampling(kspace, density=0.5, steepness=20, seed=42):
     probabilities = probabilities / density
     probabilities = jnp.clip(probabilities, 0, 1)
     mask = random.bernoulli(key, p=probabilities).astype(kspace.dtype)
+
+    return kspace * mask
+
+# This function creates a cylindrical mask in k-space, keeping only the center of the k-space.
+def cylindrical_crop(kspace, axis, factor=0.5):
+    radius = int((kspace.shape[(axis + 1) % 3] * factor) // 2)
+    radius = max(radius, 1)
+
+    # Create a mask that keeps only the center of the k-space, where the axis is the axis of slicing
+    mask = jnp.zeros(kspace.shape)
+    center = jnp.array(kspace.shape) // 2
+    Z, Y, X = jnp.indices(kspace.shape)
+
+    if axis == 0:       # Cylinder along the z-axis
+        mask = jnp.where(jnp.sqrt((X - center[2])**2 + (Y - center[1])**2) <= radius, 1, 0)
+    elif axis == 1:     # Cylinder along the y-axis
+        mask = jnp.where(jnp.sqrt((X - center[2])**2 + (Z - center[0])**2) <= radius, 1, 0)
+    elif axis == 2:     # Cylinder along the x-axis
+        mask = jnp.where(jnp.sqrt((Y - center[1])**2 + (Z - center[0])**2) <= radius, 1, 0)
 
     return kspace * mask
 
