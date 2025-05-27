@@ -13,12 +13,10 @@ from src.transformations import (
     cylindrical_crop,
     gaussian_amplification,
     rician_noise,
-    rician_edge_noise,
+    matter_noise,
     partial_fourier,
     matter_contrast
 )
-
-from src.gibbs_removal import gibbs_removal
 
 # Degrade 3T scans to resemble 1.5T scans
 def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
@@ -36,7 +34,7 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
     kspaces["gaussian_amplification"] = kspace
 
-    kspace = variable_density_undersampling(kspace, factor=1.05, softness=30)
+    kspace = variable_density_undersampling(kspace, density=0.5, steepness=15)
     kspaces["variable_density_undersampling"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
@@ -46,11 +44,11 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     image = convert_to_image(kspace)
     images["k_space_manipulation"] = image
 
-    image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.8, invert=True)
+    image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
     images["central_brightening"] = image
     
-    image = rician_edge_noise(image, axis=axis, base_noise=0.1, edge_strength=0.1)
-    images["rician_edge_noise"] = image
+    image = matter_noise(image, path, base_noise=0.005)
+    images["matter_noise"] = image
 
     if visualize:
         if slice is None:

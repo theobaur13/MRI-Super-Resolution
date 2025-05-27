@@ -37,7 +37,7 @@ def get_matching_adni_scan(path):
     adni_dir = os.path.dirname(os.path.dirname(path))
 
     # Search the 1.5T and 3T directories for the given image_id
-    pattern = re.compile(r'ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)')
+    pattern = re.compile(r'^ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)\.nii\.gz$')
     match = pattern.match(image)
     
     if match:

@@ -45,7 +45,7 @@ def cylindrical_crop(kspace, axis, factor=0.5):
     return kspace * mask
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
-def variable_density_undersampling(kspace, factor=1.05, softness=2, seed=42):
+def variable_density_undersampling(kspace, density=0.5, steepness=20, seed=42):
     key = random.PRNGKey(seed)
 
     # Chance of sampling a line is inversely proportional to its distance from the center
@@ -57,11 +57,11 @@ def variable_density_undersampling(kspace, factor=1.05, softness=2, seed=42):
     distances = distances / jnp.max(distances)
 
     # Sigmoid function
-    distances = 1 / (1 + jnp.exp(-softness * (distances - 0.5)))
+    distances = 1 / (1 + jnp.exp(-steepness * (distances - 0.5)))
 
     # Flatten
     probabilities = 1 - distances
-    probabilities = probabilities / factor
+    probabilities = probabilities / density
     probabilities = jnp.clip(probabilities, 0, 1)
     mask = random.bernoulli(key, p=probabilities).astype(kspace.dtype)
 
@@ -93,31 +93,67 @@ def gaussian_amplification(volume, axis, spread=0.5, centre=0.0, amplitude=20, i
         mask = 1.0 + mask
     return volume * mask
 
-# This function applies noise gradually at a greater intensity to the edges of the image.
-def rician_edge_noise(image, axis=2, base_noise=0.4, edge_strength=0.1, key=42):
-    gaussian_mask = gaussian(image, axis=axis, sigma=0.4, mu=0.5, A=1)
-    gaussian_mask = 1.0 - gaussian_mask  # Invert the Gaussian mask
-    sigma_map = base_noise * edge_strength * gaussian_mask
-    noisy_image = rician_noise(image, sigma_map, key=key)
-    return noisy_image
+# This function adds noise to the image according to matter type.
+def matter_noise(image, path, base_noise, key=42):
+    csf_path, gm_path, wm_path = get_seg_paths(path)
 
-# TODO: This function adds physiological noise to the image.
-def physiological_noise():
-    pass
+    # Read the segmentation files
+    csf_prob = read_nifti(csf_path).get_fdata()
+    gm_prob = read_nifti(gm_path).get_fdata()
+    wm_prob = read_nifti(wm_path).get_fdata()
+    bg_prob = 1 - (csf_prob + gm_prob + wm_prob)
+
+    temp_image = jnp.array(image)
+
+    # Apply Gaussian noise to white matter
+    wm_noise = gaussian_noise(temp_image, base_noise=base_noise, key=key)
+
+    # Apply Rician noise to grey matter and CSF
+    gm_noise = rician_noise(temp_image, base_noise=base_noise, key=key)
+    csf_noise = rician_noise(temp_image, base_noise=base_noise, key=key)
+
+    # Apply Rayleigh noise to background
+    bg_noise = rayleigh_noise(temp_image, base_noise=base_noise*0.66, key=key)
+    
+    # Combine the noise according to the probabilities
+    noisy_image = (
+        wm_prob * wm_noise +
+        gm_prob * gm_noise +
+        csf_prob * csf_noise +
+        bg_prob * bg_noise
+    )
+
+    return noisy_image
 
 # This function adds Rician noise to the image.
 def rician_noise(image, base_noise, key=42):
     key_obj = random.PRNGKey(key)
     key_real, key_imag = random.split(key_obj)
 
+    signal_real = jnp.real(image)
+    signal_imag = jnp.imag(image)
+
     noise_real = random.normal(key_real, shape=image.shape) * base_noise
     noise_imag = random.normal(key_imag, shape=image.shape) * base_noise
-    noisy_complex = image + noise_real + 1j * noise_imag
-    noisy_image = jnp.abs(noisy_complex)
+
+    noisy_real = signal_real + noise_real
+    noisy_imag = signal_imag + noise_imag
+
+    noisy_image = jnp.sqrt(noisy_real**2 + noisy_imag**2)
     return noisy_image
 
+# This function adds Gaussian noise to the image.
+def gaussian_noise(image, base_noise, key=42):
+    key_obj = random.PRNGKey(key)
+    noise = random.normal(key_obj, shape=image.shape) * base_noise
+    return image + noise
+
+def rayleigh_noise(image, base_noise, key=42):
+    key_obj = random.PRNGKey(key)
+    noise = random.rayleigh(key_obj, scale=base_noise, shape=image.shape)
+    return image + noise
+
 def partial_fourier(kspace, axis, fraction=0.625, phase_correction=None):
-    # Truncation
     target_axis = (axis + 1) % 3
     N = kspace.shape[target_axis]
     remove = N - int(jnp.floor(N * fraction))

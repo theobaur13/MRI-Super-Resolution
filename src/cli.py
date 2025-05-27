@@ -175,11 +175,11 @@ def batch_simulate(args):
     axis = 0
     for path in tqdm(paths):
         nifti = read_nifti(path)
-        simulated_nifti, _ = simluation_pipeline(nifti, axis=axis)
+        simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
         write_nifti(simulated_nifti, os.path.join(output_dir, os.path.basename(path)))
 
 def view(args):
-    nifti = read_nifti(args.path)
+    nifti = read_nifti(args.path, normalise=False)
     display_img([nifti], slice=args.slice, axis=args.axis)
     plt.show()
 
