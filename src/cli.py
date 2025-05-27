@@ -219,4 +219,5 @@ def segment(args):
         # Clear input and output directories
         os.remove(os.path.join(flywheel_input_dir, os.path.basename(scan_path)))
         for file in os.listdir(flywheel_output_dir):
-            os.remove(os.path.join(flywheel_output_dir, file))
+            if file != '.gitkeep':
+                os.remove(os.path.join(flywheel_output_dir, file))
