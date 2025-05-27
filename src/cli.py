@@ -192,7 +192,15 @@ def segment(args):
     config_path = os.path.join(flywheel_dir, "config.json")
 
     for i in tqdm(range(args.limit)):
+        # Skip condition
         scan_path = paths[i]
+        scan_dir = os.path.dirname(scan_path)
+        scan_name = os.path.basename(scan_path).split(".")[0]
+        target = scan_name + "_fast_mixeltype.nii.gz"
+
+        if os.path.exists(os.path.join(scan_dir, target)):
+            print(f"Skipping {scan_path} as it has already been segmented.")
+            continue
 
         shutil.copy(scan_path, flywheel_input_dir)
 
@@ -204,7 +212,6 @@ def segment(args):
             "scitran/fsl-fast",
         ])
 
-        scan_dir = os.path.dirname(scan_path)
         for file in os.listdir(flywheel_output_dir):
             if file.endswith(".nii.gz"):
                 shutil.copy(os.path.join(flywheel_output_dir, file), os.path.join(scan_dir, file))
