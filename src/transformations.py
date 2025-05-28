@@ -4,17 +4,22 @@ from src.utils import get_seg_paths
 from src.readwrite import read_nifti
 
 # This function performs undersampling in k-space by keeping every x-th line along the specified axis.
-def cartesian_undersampling(kspace, axis, width=10):
-    # Create a mask that keeps every x-th line along the specified axis
+def cartesian_undersampling(kspace, axis, gap=2, spine_width=50):
     mask = jnp.ones(kspace.shape)
     target_axis = (axis + 1) % 3
 
+    # Remove every x-th line along the specified axis
     for i in range(kspace.shape[target_axis]):
-        if i % width == 0:
+        if i % gap == 0:
             mask = mask.at[(slice(None),) * target_axis + (i,)].set(0)
-        else:
-            mask = mask.at[(slice(None),) * target_axis + (i,)].set(1)
     mask = mask.astype(kspace.dtype)
+
+    # Calculate the position of the spine block
+    spine_start = (kspace.shape[target_axis] - spine_width) // 2
+    spine_end = spine_start + spine_width
+    
+    # Set the spine block to 1 (keep) in the mask
+    mask = mask.at[(slice(None),) * target_axis + (slice(spine_start, spine_end),)].set(1)
 
     return kspace * mask
 
