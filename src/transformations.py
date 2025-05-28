@@ -50,8 +50,29 @@ def radial_undersampling(kspace, axis, radius=100, spoke_num=100):
 
     return kspace * mask_3d
     
-def spiral_undersampling(kspace, axis, radius=100):
-    pass
+def spiral_undersampling(kspace, axis, turns=50, samples=45000, p=3):
+    D = kspace.shape[axis]
+    H = kspace.shape[(axis + 1) % 3]
+    W = kspace.shape[(axis + 2) % 3]
+    center = jnp.array([H // 2, W // 2])
+
+    theta = jnp.linspace(0, 2 * jnp.pi * turns, samples)
+    a = min(H, W) / (2 * theta[-1] ** p)
+    r = a * theta ** p
+
+    x = r * jnp.cos(theta) + center[1]
+    y = r * jnp.sin(theta) + center[0]
+
+    # Round to nearest integer pixel indices
+    x = jnp.clip(jnp.round(x).astype(jnp.int32), 0, W - 1)
+    y = jnp.clip(jnp.round(y).astype(jnp.int32), 0, H - 1)
+
+    # Draw mask
+    mask = jnp.zeros((H, W), dtype=jnp.int32)
+    mask = mask.at[y, x].set(1)
+
+    mask = jnp.stack([mask] * D, axis=axis)
+    return kspace * mask
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
 def variable_density_undersampling(kspace, density=0.5, steepness=20, seed=42):
