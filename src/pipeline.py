@@ -11,6 +11,8 @@ from src.conversions import (
 from src.transformations import (
     variable_density_undersampling,
     radial_undersampling,
+    spiral_undersampling,
+    cartesian_undersampling,
     cylindrical_crop,
     gaussian_amplification,
     rician_noise,
@@ -19,29 +21,42 @@ from src.transformations import (
     matter_contrast
 )
 
-# Degrade 3T scans to resemble 1.5T scans
 def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
-    # Image manipulation
+    ### === Image Domain === ###
     image = jnp.array(nifti.get_fdata())
     images = {"original": image}
 
     image = matter_contrast(image, path)
     images["matter_contrast"] = image
 
-    # k-space manipulation
+    ### === k-Space Domain === ###
     kspace = convert_to_kspace(image)
     kspaces = {"original": kspace}
+
+    ### --- Downsampling --- ###
+    kspace = cylindrical_crop(kspace, axis=axis, fraction=0.8)
+    kspaces["cylindrical_crop"] = kspace
 
     kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
     kspaces["gaussian_amplification"] = kspace
 
-    kspace = variable_density_undersampling(kspace, density=0.5, steepness=15)
-    kspaces["variable_density_undersampling"] = kspace
+    ### --- Undersampling --- ###
+    kspace = radial_undersampling(kspace, axis=axis)
+    kspaces["radial_undersampling"] = kspace
+
+    # kspace = spiral_undersampling(kspace, axis=axis)
+    # kspaces["spiral_undersampling"] = kspace
+
+    # kspace = cartesian_undersampling(kspace, axis=axis)
+    # kspaces["cartesian_undersampling"] = kspace
+
+    # kspace = variable_density_undersampling(kspace, density=0.5, steepness=15)
+    # kspaces["variable_density_undersampling"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
     kspaces["partial_fourier"] = kspace
     
-    # Image manipulation
+    ### === Image Domain === ###
     image = convert_to_image(kspace)
     images["k_space_manipulation"] = image
 
@@ -51,6 +66,7 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     image = matter_noise(image, path, base_noise=0.005)
     images["matter_noise"] = image
 
+    # Visualise each stage of the simulation pipeline if requested
     if visualize:
         if slice is None:
             raise ValueError("Slice index must be provided for visualization.")
@@ -65,12 +81,12 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
             slice=voxel_slice, axis=axis,
             titles=list(images.keys()))
         
-        # Display the k-space
+        # Display the original and simulated k-spaces
         display_3d(
             list(kspaces.values()),
             slice=voxel_slice, axis=axis, limit=1,
             titles=list(kspaces.keys()))
 
-    # Convert to NIfTI
+    # Convert the final image to NIfTI format
     simulated_nifti = nib.Nifti1Image(jax_to_numpy(image), affine=nifti.affine)
     return simulated_nifti, kspace
