@@ -24,6 +24,33 @@ def cartesian_undersampling(kspace, axis, gap=2, spine_width=50):
     return kspace * mask
 
 def radial_undersampling(kspace, axis, radius=100, spoke_num=100):
+    D = kspace.shape[axis]
+    H = kspace.shape[(axis + 1) % 3]
+    W = kspace.shape[(axis + 2) % 3]
+    center = jnp.array([H // 2, W // 2])
+
+    # Initialize binary mask
+    mask_2d  = jnp.zeros_like(jnp.zeros((H, W)), dtype=jnp.int32)
+
+    # Generate radial angles
+    angles = jnp.linspace(0, jnp.pi, spoke_num, endpoint=False)
+
+    for theta in angles:
+        # Generate coordinates along the spoke
+        dx = jnp.cos(theta)
+        dy = jnp.sin(theta)
+        for r in range(-radius, radius):
+            y = int(center[0] + r * dy)
+            x = int(center[1] + r * dx)
+            # Only apply if inside bounds
+            if 0 <= y < H and 0 <= x < W:
+                mask_2d  = mask_2d .at[y, x].set(1)
+
+    mask_3d = jnp.stack([mask_2d] * D, axis=axis)
+
+    return kspace * mask_3d
+    
+def spiral_undersampling(kspace, axis, radius=100):
     pass
 
 # This function randomly samples lines in k-space with a probability that decreases with distance from the center.
