@@ -190,7 +190,7 @@ def view(args):
     plt.show()
 
 def segment(args):
-    paths, _ = get_brats_paths(args.dataset_dir, "t1n")
+    paths, _ = get_brats_paths(args.dataset_dir)
 
     flywheel_dir = os.path.join(os.getcwd(), "flywheel", "v0")
     flywheel_input_dir = os.path.join(flywheel_dir, "input", "nifti")
@@ -203,7 +203,13 @@ def segment(args):
         scan_dir = os.path.dirname(scan_path)
         scan_name = os.path.basename(scan_path).split(".")[0]
         target = scan_name + "_fast_mixeltype.nii.gz"
-
+        seq = scan_name.split("-")[-1]
+        if seq in ["t1c", "t1n"]:
+            n = "1"
+        elif seq in ["t2f", "t2w"]:
+            n = "2"
+            
+        print(f"Segmenting {scan_path} with sequence {seq}...")
         if os.path.exists(os.path.join(scan_dir, target)):
             print(f"Skipping {scan_path} as it has already been segmented.")
             continue
@@ -216,6 +222,7 @@ def segment(args):
             "-v", f"{flywheel_input_dir}:/flywheel/v0/input/nifti",
             "-v", f"{flywheel_output_dir}:/flywheel/v0/output",
             "scitran/fsl-fast",
+            "-t", n,
         ])
 
         for file in os.listdir(flywheel_output_dir):

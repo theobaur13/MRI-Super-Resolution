@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     # Subparser for simulating data
     # > py main.py simulate --path "D:\ADNI_NIfTIs\3T\ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24 --compare True
-    # > py main.py simulate --path "D:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2f.nii.gz" --axis 2 --slice 65
+    # > py main.py simulate --path "D:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t1n.nii.gz" --axis 2 --slice 65
     simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
     simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
     simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
@@ -62,13 +62,15 @@ if __name__ == "__main__":
     analyse_brightness_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
     # Subparser for batch simulation
-    # > py main.py batch-simulate --brats_dir "D:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated"
+    # > py main.py batch-simulate --brats_dir "D:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated" --axis 2 --limit 100
     batch_convert_parser = subparsers.add_parser("batch-simulate", help="Simulate data in batch")
     batch_convert_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
     batch_convert_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
+    batch_convert_parser.add_argument("--axis", type=int, required=True, help="Axis for simulation")
+    batch_convert_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
 
     # Subparser for viewing data
-    # > py main.py view --path "D:\data-brats-2024\GoAT\train-WithGroundTruth\BraTS-GoAT-00000\BraTS-GoAT-00000-t2f.nii.gz" --slice 65 --axis 2
+    # > py main.py view --path "D:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
     view_parser = subparsers.add_parser("view", help="View NIfTI data")
     view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")

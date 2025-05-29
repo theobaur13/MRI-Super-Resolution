@@ -26,19 +26,19 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     image = jnp.array(nifti.get_fdata())
     images = {"original": image}
 
-    image = matter_contrast(image, path)
-    images["matter_contrast"] = image
+    # image = matter_contrast(image, path)
+    # images["matter_contrast"] = image
 
     ### === k-Space Domain === ###
     kspace = convert_to_kspace(image)
     kspaces = {"original": kspace}
 
     ### --- Downsampling --- ###
-    kspace = cylindrical_crop(kspace, axis=axis, fraction=0.8)
+    kspace = cylindrical_crop(kspace, axis=axis, factor=0.58)
     kspaces["cylindrical_crop"] = kspace
 
-    kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
-    kspaces["gaussian_amplification"] = kspace
+    # kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
+    # kspaces["gaussian_amplification"] = kspace
 
     ### --- Undersampling --- ###
     kspace = radial_undersampling(kspace, axis=axis)
@@ -63,8 +63,11 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
     images["central_brightening"] = image
     
-    image = matter_noise(image, path, base_noise=0.005)
-    images["matter_noise"] = image
+    # image = matter_noise(image, path, base_noise=0.005)
+    # images["matter_noise"] = image
+
+    image = rician_noise(image, base_noise=0.005)
+    images["rician_noise"] = image
 
     # Visualise each stage of the simulation pipeline if requested
     if visualize:
