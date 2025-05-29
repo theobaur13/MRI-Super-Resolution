@@ -168,16 +168,22 @@ def batch_simulate(args):
     # Arguments
     brats_dir = args.brats_dir                              # Path to BraTS directory
     output_dir = args.output_dir                            # Output directory for converted data
+    limit = args.limit
+    axis = args.axis
 
     os.makedirs(output_dir, exist_ok=True)
     paths, validate_paths = get_brats_paths(brats_dir)
 
-    axis = 0
-    for path in tqdm(paths):
+    if not limit:
+        limit = len(paths)
+
+    for i in tqdm(range(limit)):
+        path = paths[i]
         nifti = read_nifti(path)
+
         simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
         write_nifti(simulated_nifti, os.path.join(output_dir, os.path.basename(path)))
-
+        
 def view(args):
     nifti = read_nifti(args.path, normalise=False)
     display_img([nifti], slice=args.slice, axis=args.axis)
