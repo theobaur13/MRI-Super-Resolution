@@ -1,4 +1,5 @@
 venv
+venv-wsl
 __pycache__
 *.pyc
 data
@@ -9,3 +10,4 @@ flywheel/v0/input/nifti/*
 flywheel/v0/output/*
 !flywheel/v0/input/nifti/.gitkeep
 !flywheel/v0/output/.gitkeep
+run.ps1

@@ -218,11 +218,12 @@ def segment(args):
 
         subprocess.run([
             "docker", "run", "--rm",
+            "--gpus", "all",
             "-v", f"{config_path}:/flywheel/v0/config.json",
             "-v", f"{flywheel_input_dir}:/flywheel/v0/input/nifti",
             "-v", f"{flywheel_output_dir}:/flywheel/v0/output",
             "scitran/fsl-fast",
-            "-t", n,
+            "-t", n
         ])
 
         for file in os.listdir(flywheel_output_dir):

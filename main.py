@@ -18,14 +18,14 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     # Subparser for converting ADNI data
-    # > py main.py convert-adni --ADNI_dir "D:\ADNI" --ADNI_nifti_dir "D:\ADNI_NIfTIs"
+    # > py main.py convert-adni --ADNI_dir "E:\ADNI" --ADNI_nifti_dir "D:\ADNI_NIfTIs"
     convert_parser = subparsers.add_parser("convert-adni", help="Convert ADNI data to NIfTI format")
     convert_parser.add_argument("--ADNI_dir", type=str, help="Path to ADNI directory")
     convert_parser.add_argument("--ADNI_nifti_dir", type=str, help="Path to ADNI NIfTI directory")
 
     # Subparser for simulating data
-    # > py main.py simulate --path "D:\ADNI_NIfTIs\3T\ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24 --compare True
-    # > py main.py simulate --path "D:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t1n.nii.gz" --axis 2 --slice 65
+    # > py main.py simulate --path "E:\ADNI_NIfTIs\3T\ADNI_002_S_0413_MR_Double_TSE_br_raw_20061115141733_1_S22682_I30117.nii.gz" --axis 2 --slice 24 --compare True
+    # > py main.py simulate --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t1n.nii.gz" --axis 2 --slice 65
     simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
     simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
     simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     simulate_parser.add_argument("--compare", type=bool, default=False, help="Whether to compare with original data (only for ADNI)")
 
     # Subparser for analysing noise
-    # > py main.py analyse-snr-avg --dataset_dir "D:\ADNI_NIfTIs" --axis 2
-    # > py main.py analyse-snr-avg --dataset_dir "D:\data-brats-2024" --axis 2 --seq "t2f" --dataset "BraSyn"
+    # > py main.py analyse-snr-avg --dataset_dir "E:\ADNI_NIfTIs" --axis 2
+    # > py main.py analyse-snr-avg --dataset_dir "E:\data-brats-2024" --axis 2 --seq "t2f" --dataset "BraSyn"
     analyse_noise_parser = subparsers.add_parser("analyse-snr-avg", help="Analyse noise in data")
     analyse_noise_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     analyse_noise_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     analyse_noise_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
     # Subparser for analysing SNR map
-    # > py main.py analyse-snr-map --dataset_dir "D:\ADNI_NIfTIs" --axis 2 --slice 24
-    # > py main.py analyse-snr-map --dataset_dir "D:\data-brats-2024" --axis 2 --slice 65 --seq "t2f" --dataset "BraSyn"
+    # > py main.py analyse-snr-map --dataset_dir "E:\ADNI_NIfTIs" --axis 2 --slice 24
+    # > py main.py analyse-snr-map --dataset_dir "E:\data-brats-2024" --axis 2 --slice 65 --seq "t2f" --dataset "BraSyn"
     analyse_snr_map_parser = subparsers.add_parser("analyse-snr-map", help="Analyse SNR map in data")
     analyse_snr_map_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     analyse_snr_map_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
@@ -52,8 +52,8 @@ if __name__ == "__main__":
     analyse_snr_map_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
     # Subparser for analysing brightness
-    # > py main.py analyse-brightness --dataset_dir "D:\ADNI_NIfTIs" --slice 24 --axis 2
-    # > py main.py analyse-brightness --dataset_dir "D:\data-brats-2024" --slice 65 --axis 2 --seq "t2f" --dataset "BraSyn"
+    # > py main.py analyse-brightness --dataset_dir "E:\ADNI_NIfTIs" --slice 24 --axis 2
+    # > py main.py analyse-brightness --dataset_dir "E:\data-brats-2024" --slice 65 --axis 2 --seq "t2f" --dataset "BraSyn"
     analyse_brightness_parser = subparsers.add_parser("analyse-brightness", help="Analyse brightness in data")
     analyse_brightness_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     analyse_brightness_parser.add_argument("--axis", type=int, default=0, help="Axis for analysis")
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     analyse_brightness_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
     # Subparser for batch simulation
-    # > py main.py batch-simulate --brats_dir "D:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated" --axis 2 --limit 100
+    # > py main.py batch-simulate --brats_dir "E:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated" --axis 2 --limit 100
     batch_convert_parser = subparsers.add_parser("batch-simulate", help="Simulate data in batch")
     batch_convert_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
     batch_convert_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
@@ -70,20 +70,20 @@ if __name__ == "__main__":
     batch_convert_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
 
     # Subparser for viewing data
-    # > py main.py view --path "D:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
+    # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
     view_parser = subparsers.add_parser("view", help="View NIfTI data")
     view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
     view_parser.add_argument("--axis", type=int, default=0, help="Axis for viewing")
     
     # Subparser for segmenting data
-    # py main.py segment --dataset_dir "D:\data-brats-2024" --limit 1
+    # py main.py segment --dataset_dir "E:\data-brats-2024" --limit 1
     segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
     segment_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
-    # py main.py train --dataset_dir "D:\data-brats-2024" --model "ESRGAN" --epochs 20
+    # py main.py train --dataset_dir "E:\data-brats-2024" --model "ESRGAN" --epochs 20
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
     training_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
     training_parser.add_argument("--model", type=str, choices=["ESRGAN"], required=True, help="Model to train")
