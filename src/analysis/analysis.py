@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 import numpy as np
 from tqdm import tqdm
-from src.conversions import jax_to_numpy, numpy_to_jax
+from src.utils.conversions import jax_to_numpy, numpy_to_jax
 
 # Function to generate and display a brightness mask for a given slice in two hypervolumes
 def generate_brightness_map(slices_1, slices_2, smoothing_factor=5):

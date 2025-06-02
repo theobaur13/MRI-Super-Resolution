@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
-from src.conversions import jax_to_numpy
-from src.slicing import slice_nifti
+from src.utils.conversions import jax_to_numpy
+from src.utils.slicing import slice_nifti
 
 # Extract a 2D slice from a 3D volume or NIfTI object.
 def extract_slice(data, slice=65, axis=0):

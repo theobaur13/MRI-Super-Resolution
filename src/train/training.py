@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from src.models.ESRGAN import Generator, Discriminator
+from src.train.models.ESRGAN import Generator, Discriminator
 
 def loop(epochs, dataloader, batch_size):
     generator = Generator().to("cuda")

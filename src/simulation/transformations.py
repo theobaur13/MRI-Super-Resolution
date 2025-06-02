@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from jax import random
-from src.utils import get_seg_paths
-from src.readwrite import read_nifti
+from src.utils.paths import get_seg_paths
+from src.utils.readwrite import read_nifti
 
 # This function performs undersampling in k-space by keeping every x-th line along the specified axis.
 def cartesian_undersampling(kspace, axis, gap=2, spine_width=50):

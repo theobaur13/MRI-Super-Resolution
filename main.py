@@ -1,14 +1,12 @@
 import os
 import argparse
-from src.cli import (
-    convert_adni,
-    simulate,
-    analyse,
-    generate_training_data,
-    view,
-    segment,
-    train
-)
+from src.analysis.handler import analyse
+from src.display.handler import view
+from src.simulation.handler import simulate
+from src.train.handler import train
+from src.segment.handler import segment
+from src.convert_adni.handler import convert_adni
+from src.generate_training_data.handler import generate_training_data
 
 if __name__ == "__main__":
     # Set up directories

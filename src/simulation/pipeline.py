@@ -1,15 +1,15 @@
 import jax
 import jax.numpy as jnp
 import nibabel as nib
-from src.display import display_img, display_3d
-from src.slicing import world_to_voxel_slice
-from src.conversions import (
+from src.display.plot import display_img, display_3d
+from src.utils.slicing import world_to_voxel_slice
+from src.utils.conversions import (
     convert_to_kspace,
     convert_to_image,
     jax_to_numpy,
     numpy_to_jax
 )
-from src.transformations import (
+from src.simulation.transformations import (
     variable_density_undersampling,
     radial_undersampling,
     spiral_undersampling,

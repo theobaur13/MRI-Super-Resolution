@@ -1,11 +1,6 @@
-import os
 import nibabel as nib
-from nilearn import datasets, image
 import jax.numpy as jnp
 import numpy as np
-from tqdm import tqdm
-import dicom2nifti
-from src.utils import get_adni_paths
 
 def read_nifti(file_path, brats=False, normalise=True):
     nifti = nib.load(file_path)

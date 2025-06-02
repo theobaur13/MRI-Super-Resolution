@@ -1,36 +1,7 @@
 import os
 import re
 from datetime import datetime
-import jax.numpy as jnp
 from tqdm import tqdm
-
-def robust_max(image, axis, slice_idx=None):
-    if axis == 0:
-        data = image[slice_idx, :, :]
-    elif axis == 1:
-        data = image[:, slice_idx, :]
-    elif axis == 2:
-        data = image[:, :, slice_idx]
-    
-    # Flatten the data to a 1D array for statistical operations
-    data_flat = jnp.abs(data.flatten())
-    
-    # Calculate the 25th and 75th percentiles (Q1 and Q3)
-    q1 = jnp.percentile(data_flat, 40)
-    q3 = jnp.percentile(data_flat, 60)
-    
-    # Calculate the IQR (Interquartile Range)
-    iqr = q3 - q1
-    
-    # Define bounds for removing outliers
-    lower_bound = q1 - 1.5 * iqr
-    upper_bound = q3 + 1.5 * iqr
-    
-    # Filter out values that are outside the IQR range
-    filtered_data = data_flat[(data_flat >= lower_bound) & (data_flat <= upper_bound)]
-    
-    # Calculate the maximum of the filtered data
-    return filtered_data.max()
 
 def get_matching_adni_scan(path):
     image = os.path.basename(path)
