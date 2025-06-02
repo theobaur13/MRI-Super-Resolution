@@ -6,8 +6,9 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import dicom2nifti
-from src.pipeline import simluation_pipeline
-from src.conversions import convert_to_kspace
+import nibabel as nib
+from src.pipeline import simluation_pipeline, simulate_batch
+from src.conversions import convert_to_kspace, jax_to_numpy
 from src.readwrite import read_nifti, write_nifti
 from src.display import display_img, display_3d
 from src.analysis import compare_snr, generate_brightness_map, generate_snr_map
@@ -160,10 +161,11 @@ def generate_training_data(args):
     output_dir = args.output_dir                            # Output directory for converted data
     limit = args.limit
     axis = args.axis
+    batch_size = 5
 
-    os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(output_dir, "validate"), exist_ok=True)
+
     train_paths, validate_paths = get_brats_paths(brats_dir)
 
     if not limit:
@@ -175,18 +177,31 @@ def generate_training_data(args):
         validate_limit = int(train_limit * (len(validate_paths) / len(train_paths)))
 
     print(f"Simulating {train_limit} training scans and {validate_limit} validation scans...")
-    for i in tqdm(range(train_limit)):
-        path = train_paths[i]
-        nifti = read_nifti(path)
-        simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
-        write_nifti(simulated_nifti, os.path.join(output_dir, "train", os.path.basename(path)))
+    
+    for i in tqdm(range(0, train_limit, batch_size)):
+        train_images = []
+        train_affines = []
 
-    for i in tqdm(range(validate_limit)):
-        path = validate_paths[i]
-        nifti = read_nifti(path)
-        simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
-        write_nifti(simulated_nifti, os.path.join(output_dir, "validate", os.path.basename(path)))
+        for j in range(i, min(i + batch_size, train_limit)):
+            nifti = read_nifti(train_paths[j])
+            train_images.append(nifti.get_fdata())
+            train_affines.append(nifti.affine)
         
+        print("Stacking images into numpy arrays...")
+        batch_images_np = np.stack(train_images).astype(np.float32)
+        batch_affines = np.array(train_affines)
+        batch_images_jax = jnp.array(batch_images_np)
+
+        print("Simulating batches of images...")
+        batch_results, _ = simulate_batch(batch_images_jax, axis)
+
+        print("Saving simulated images...")
+        for j in range(batch_results["final"].shape[0]):
+            final_image = batch_results["final"][j]
+            affine = batch_affines[j]
+            out_path = os.path.join(output_dir, "train", os.path.basename(train_paths[i + j]))
+            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), out_path)
+
 def view(args):
     nifti = read_nifti(args.path, normalise=False)
     display_img([nifti], slice=args.slice, axis=args.axis)

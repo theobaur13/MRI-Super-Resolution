@@ -108,3 +108,10 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
     # Convert the final image to NIfTI format
     simulated_nifti = nib.Nifti1Image(jax_to_numpy(images["final"]), affine=nifti.affine)
     return simulated_nifti
+
+# Simulate a batch of images
+def simulate_batch(images, axis: int):
+    @jax.jit
+    def simulate_one(image):
+        return core(image, axis)
+    return jax.vmap(simulate_one)(images)

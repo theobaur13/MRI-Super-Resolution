@@ -4,9 +4,10 @@ from src.cli import (
     convert_adni,
     simulate,
     analyse,
-    batch_simulate,
+    generate_training_data,
     view,
-    segment
+    segment,
+    train
 )
 
 if __name__ == "__main__":
@@ -61,13 +62,13 @@ if __name__ == "__main__":
     analyse_brightness_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
     analyse_brightness_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
-    # Subparser for batch simulation
-    # > py main.py batch-simulate --brats_dir "E:\data-brats-2024" --output_dir "D:\data-brats-2024_simulated" --axis 2 --limit 100
-    batch_convert_parser = subparsers.add_parser("batch-simulate", help="Simulate data in batch")
-    batch_convert_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
-    batch_convert_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
-    batch_convert_parser.add_argument("--axis", type=int, required=True, help="Axis for simulation")
-    batch_convert_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
+    # Subparser for generating training data
+    # > py main.py generate-training-data --brats_dir "E:\data-brats-2024" --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100
+    generate_training_data_parser = subparsers.add_parser("generate-training-data", help="Generate simulated training data for BraTS")
+    generate_training_data_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
+    generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
+    generate_training_data_parser.add_argument("--axis", type=int, required=True, help="Axis for simulation")
+    generate_training_data_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
 
     # Subparser for viewing data
     # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
@@ -83,11 +84,9 @@ if __name__ == "__main__":
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
-    # py main.py train --dataset_dir "E:\data-brats-2024" --model "ESRGAN" --epochs 20
+    # py main.py train --dataset_dir "E:\data-brats-2024"
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
     training_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
-    training_parser.add_argument("--model", type=str, choices=["ESRGAN"], required=True, help="Model to train")
-    training_parser.add_argument("--epochs", type=int, default=20, help="Number of epochs for training")
 
     args = parser.parse_args()
     action = args.action.lower()
@@ -105,8 +104,8 @@ if __name__ == "__main__":
         analyse(args)
 
     # Apply degradation to BraTS scans
-    elif action == "batch-simulate":
-        batch_simulate(args)
+    elif action == "generate-training-data":
+        generate_training_data(args)
 
     # View a slice of a NIfTI file
     elif action == "view":
@@ -115,3 +114,7 @@ if __name__ == "__main__":
     # Segment a NIfTI file into white matter, grey matter, and CSF
     elif action =="segment":
         segment(args)
+
+    # Train a model on the dataset
+    elif action == "train":
+        train(args)
