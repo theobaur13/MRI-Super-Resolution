@@ -161,12 +161,13 @@ def generate_training_data(args):
     output_dir = args.output_dir                            # Output directory for converted data
     limit = args.limit
     axis = args.axis
+    seq = args.seq
     batch_size = 5
 
     os.makedirs(os.path.join(output_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(output_dir, "validate"), exist_ok=True)
 
-    train_paths, validate_paths = get_brats_paths(brats_dir)
+    train_paths, validate_paths = get_brats_paths(brats_dir, seq)
 
     if not limit:
         train_limit = len(train_paths)

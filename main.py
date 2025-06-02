@@ -69,6 +69,7 @@ if __name__ == "__main__":
     generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
     generate_training_data_parser.add_argument("--axis", type=int, required=True, help="Axis for simulation")
     generate_training_data_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
+    generate_training_data_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
 
     # Subparser for viewing data
     # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
