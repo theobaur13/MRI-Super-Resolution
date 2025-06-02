@@ -176,30 +176,56 @@ def generate_training_data(args):
         # Keep the same ratio of train to validate as in the original dataset
         validate_limit = int(train_limit * (len(validate_paths) / len(train_paths)))
 
-    print(f"Simulating {train_limit} training scans and {validate_limit} validation scans...")
-    
+    print(f"Simulating {train_limit} training scans")
     for i in tqdm(range(0, train_limit, batch_size)):
         train_images = []
         train_affines = []
 
+        # Read images
         for j in range(i, min(i + batch_size, train_limit)):
             nifti = read_nifti(train_paths[j])
             train_images.append(nifti.get_fdata())
             train_affines.append(nifti.affine)
         
-        print("Stacking images into numpy arrays...")
+        # Stack images into for parallel processing
         batch_images_np = np.stack(train_images).astype(np.float32)
         batch_affines = np.array(train_affines)
         batch_images_jax = jnp.array(batch_images_np)
 
-        print("Simulating batches of images...")
+        # Simulate batches of images
         batch_results, _ = simulate_batch(batch_images_jax, axis)
 
-        print("Saving simulated images...")
+        # Save simulated images
         for j in range(batch_results["final"].shape[0]):
             final_image = batch_results["final"][j]
             affine = batch_affines[j]
             out_path = os.path.join(output_dir, "train", os.path.basename(train_paths[i + j]))
+            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), out_path)
+
+    print(f"Simulating {validate_limit} validation scans")
+    for i in tqdm(range(0, validate_limit, batch_size)):
+        validate_images = []
+        validate_affines = []
+
+        # Read images
+        for j in range(i, min(i + batch_size, validate_limit)):
+            nifti = read_nifti(validate_paths[j])
+            validate_images.append(nifti.get_fdata())
+            validate_affines.append(nifti.affine)
+        
+        # Stack images into for parallel processing
+        batch_images_np = np.stack(validate_images).astype(np.float32)
+        batch_affines = np.array(validate_affines)
+        batch_images_jax = jnp.array(batch_images_np)
+
+        # Simulate batches of images
+        batch_results, _ = simulate_batch(batch_images_jax, axis)
+
+        # Save simulated images
+        for j in range(batch_results["final"].shape[0]):
+            final_image = batch_results["final"][j]
+            affine = batch_affines[j]
+            out_path = os.path.join(output_dir, "validate", os.path.basename(validate_paths[i + j]))
             write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), out_path)
 
 def view(args):
