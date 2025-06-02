@@ -77,7 +77,6 @@ def get_matching_adni_scan(path):
             print(f"No matching image found in {target_strengh} directory for {image}")
             return None
 
-# TODO: Make it so that dataset is optional, and if not provided, it will return all sequences and datasets
 def get_brats_paths(data_dir, seq=None, dataset=None):
     datasets = [dataset] if dataset else ["BraSyn", "GLI", "GoAT", "LocalInpainting", "MEN-RT", "MET", "PED", "SSA"]
     train_paths, validate_paths = [], []
