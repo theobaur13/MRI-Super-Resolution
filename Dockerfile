@@ -22,6 +22,6 @@ RUN pip install \
     jaxlib==0.4.23+cuda12.cudnn89 \
     -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements-docker.txt
 
 CMD ["python", "main.py"]
