@@ -61,24 +61,14 @@ def simulate(args):
     
     nifti_3T = read_nifti(path_3T)
 
-    simulated_nifti, simulated_kspace = simluation_pipeline(nifti_3T, axis, path, visualize=True, slice=slice_idx)
+    simulated_nifti = simluation_pipeline(nifti_3T, axis, path, visualize=True, slice=slice_idx)
 
     if compare:
         # Display the target vs simulated image
         display_img([nifti_1_5T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 1.5T Image", "Simulated 1.5T Image"])
-        
-        # Display the target vs simulated k-space
-        original_volume = jnp.array(nifti_1_5T.get_fdata())
-        original_kspace = convert_to_kspace(original_volume)
-        display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Target 1.5T k-Space", "Simulated 1.5T k-Space"])
     else:
-        original_kspace = convert_to_kspace(nifti_3T.get_fdata())
-
         # Display the simulated image
-        display_img([nifti_3T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 3T Image", "Simulated 1.5T Image"])
-
-        # Display the k-space
-        display_3d([original_kspace, simulated_kspace], slice=slice_idx, axis=axis, limit=1, titles=["Original 3T k-Space", "Simulated 1.5T k-Space"])      
+        display_img([nifti_3T, simulated_nifti], slice=slice_idx, axis=axis, titles=["Original 3T Image", "Simulated 1.5T Image"])    
     plt.show()
 
 def analyse(args):
@@ -164,7 +154,7 @@ def analyse(args):
 
     plt.show()
 
-def batch_simulate(args):
+def generate_training_data(args):
     # Arguments
     brats_dir = args.brats_dir                              # Path to BraTS directory
     output_dir = args.output_dir                            # Output directory for converted data
@@ -172,17 +162,30 @@ def batch_simulate(args):
     axis = args.axis
 
     os.makedirs(output_dir, exist_ok=True)
-    paths, validate_paths = get_brats_paths(brats_dir)
+    os.makedirs(os.path.join(output_dir, "train"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "validate"), exist_ok=True)
+    train_paths, validate_paths = get_brats_paths(brats_dir)
 
     if not limit:
-        limit = len(paths)
+        train_limit = len(train_paths)
+        validate_limit = len(validate_paths)
+    else:
+        train_limit = min(limit, len(train_paths))
+        # Keep the same ratio of train to validate as in the original dataset
+        validate_limit = int(train_limit * (len(validate_paths) / len(train_paths)))
 
-    for i in tqdm(range(limit)):
-        path = paths[i]
+    print(f"Simulating {train_limit} training scans and {validate_limit} validation scans...")
+    for i in tqdm(range(train_limit)):
+        path = train_paths[i]
         nifti = read_nifti(path)
-
         simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
-        write_nifti(simulated_nifti, os.path.join(output_dir, os.path.basename(path)))
+        write_nifti(simulated_nifti, os.path.join(output_dir, "train", os.path.basename(path)))
+
+    for i in tqdm(range(validate_limit)):
+        path = validate_paths[i]
+        nifti = read_nifti(path)
+        simulated_nifti, _ = simluation_pipeline(nifti, axis, path)
+        write_nifti(simulated_nifti, os.path.join(output_dir, "validate", os.path.basename(path)))
         
 def view(args):
     nifti = read_nifti(args.path, normalise=False)
@@ -235,3 +238,8 @@ def segment(args):
         for file in os.listdir(flywheel_output_dir):
             if file != '.gitkeep':
                 os.remove(os.path.join(flywheel_output_dir, file))
+
+def train(args):
+    dataset_dir = args.dataset_dir
+    
+    
