@@ -24,29 +24,37 @@ def cartesian_undersampling(kspace, axis, gap=2, spine_width=50):
     return kspace * mask
 
 def radial_undersampling(kspace, axis, radius=100, spoke_num=100):
-    D = kspace.shape[axis]
-    H = kspace.shape[(axis + 1) % 3]
-    W = kspace.shape[(axis + 2) % 3]
+    shape = kspace.shape
+    D, H, W = shape[axis], shape[(axis + 1) % 3], shape[(axis + 2) % 3]
     center = jnp.array([H // 2, W // 2])
 
-    # Initialize binary mask
-    mask_2d  = jnp.zeros_like(jnp.zeros((H, W)), dtype=jnp.int32)
-
-    # Generate radial angles
+    # Create 1D arrays for angles and radius
     angles = jnp.linspace(0, jnp.pi, spoke_num, endpoint=False)
+    r = jnp.arange(-radius, radius)
 
-    for theta in angles:
-        # Generate coordinates along the spoke
-        dx = jnp.cos(theta)
-        dy = jnp.sin(theta)
-        for r in range(-radius, radius):
-            y = int(center[0] + r * dy)
-            x = int(center[1] + r * dx)
-            # Only apply if inside bounds
-            if 0 <= y < H and 0 <= x < W:
-                mask_2d  = mask_2d .at[y, x].set(1)
+    # Meshgrid of all spoke points
+    dx = jnp.cos(angles)[:, None]
+    dy = jnp.sin(angles)[:, None]
 
-    mask_3d = jnp.stack([mask_2d] * D, axis=axis)
+    # Shape: (spoke_num, 2*radius)
+    x_coords = jnp.clip((center[1] + r * dx), 0, W - 1).astype(jnp.int32)
+    y_coords = jnp.clip((center[0] + r * dy), 0, H - 1).astype(jnp.int32)
+
+    # Flatten the indices
+    x_flat = x_coords.reshape(-1)
+    y_flat = y_coords.reshape(-1)
+
+    # Create 2D mask
+    mask_2d = jnp.zeros((H, W), dtype=jnp.int32)
+    mask_2d = mask_2d.at[y_flat, x_flat].set(1)
+
+    # Repeat mask along the target axis
+    if axis == 0:
+        mask_3d = jnp.stack([mask_2d] * D, axis=0)
+    elif axis == 1:
+        mask_3d = jnp.stack([mask_2d] * D, axis=1)
+    elif axis == 2:
+        mask_3d = jnp.stack([mask_2d] * D, axis=2)
 
     return kspace * mask_3d
     
@@ -116,20 +124,29 @@ def cylindrical_crop(kspace, axis, factor=0.5):
 
     return kspace * mask
 
-def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20):
-    # sigma: standard deviation of the Gaussian
-    # mu: mean of the Gaussian
-    # A: amplitude of the Gaussian
+def gaussian(volume, axis, sigma=0.5, mu=0.0, A=20.0):
     shape = volume.shape
     coords = [jnp.linspace(0, 1, shape[i]) for i in range(3)]
-    coords = coords[axis:] + coords[:axis]  
+
+    # Rearrange coords so that the desired axis comes first
+    coords = coords[axis:] + coords[:axis]
     X, Y, Z = jnp.meshgrid(*coords, indexing='ij')
 
-    gaussian = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
+    # Apply Gaussian
+    g = A * jnp.exp(-((X - mu) ** 2 + (Y - mu) ** 2 + (Z - mu) ** 2) / (2 * sigma ** 2))
 
-    inverse_permutation = jnp.argsort(jnp.array([axis, (axis + 1) % 3, (axis + 2) % 3]))
-    gaussian = jnp.transpose(gaussian, axes=tuple(inverse_permutation))
-    return gaussian
+    # Transpose back to original axis order manually (static)
+    if axis == 0:
+        axes = (0, 1, 2)
+    elif axis == 1:
+        axes = (2, 0, 1)
+    elif axis == 2:
+        axes = (1, 2, 0)
+    else:
+        raise ValueError(f"Invalid axis: {axis}")
+
+    g = jnp.transpose(g, axes=axes)
+    return g
 
 # This function magnifies the brightness/intensity of a volume such that the center of each image slice is magnified greater than the edges.
 def gaussian_amplification(volume, axis, spread=0.5, centre=0.0, amplitude=20, invert=False):
@@ -204,19 +221,22 @@ def rayleigh_noise(image, base_noise, key=42):
 
 def partial_fourier(kspace, axis, fraction=0.625, phase_correction=None):
     target_axis = (axis + 1) % 3
-    N = kspace.shape[target_axis]
-    remove = N - int(jnp.floor(N * fraction))
-    mask = jnp.zeros(kspace.shape)
-    mask = mask.at[(slice(None),) * target_axis + (slice(remove, N),)].set(1)
-
-    if phase_correction == "homodyne":
-        # TODO: Implement homodyne phase correction
-        pass
+    shape = kspace.shape
+    N = shape[target_axis]
     
-    elif phase_correction == "PCOS":
-        # TODO: Implement PCOS phase correction
-        pass
+    # Compute how many elements to keep
+    keep = int(N * fraction)
+    
+    # Create mask: ones in the last `keep` entries along the target axis
+    idx = jnp.arange(N)
+    mask_1d = (idx >= (N - keep)).astype(kspace.dtype)  # shape: (N,)
+    
+    # Reshape for broadcasting
+    mask_shape = [1, 1, 1]
+    mask_shape[target_axis] = N
+    mask = jnp.reshape(mask_1d, mask_shape)
 
+    # Broadcast to kspace shape and apply mask
     return kspace * mask
 
 # Adjust the contrast of the image in accordance to GM, WM, CSF.

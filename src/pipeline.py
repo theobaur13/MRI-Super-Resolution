@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import nibabel as nib
 from src.display import display_img, display_3d
@@ -21,26 +22,30 @@ from src.transformations import (
     matter_contrast
 )
 
-def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
-    ### === Image Domain === ###
-    image = jnp.array(nifti.get_fdata())
-    images = {"original": image}
+def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
+    """
+    Core function to apply transformations to the image.
+    
+    Args:
+        image (jax.Array): Input image in JAX array format.
+        axis (int): Axis along which to apply transformations.
+    
+    Returns:
+        dict: Dictionary containing intermediate results of the transformations.
+    """
+    kspaces = {}
+    images = {}
 
     # image = matter_contrast(image, path)
     # images["matter_contrast"] = image
 
     ### === k-Space Domain === ###
     kspace = convert_to_kspace(image)
-    kspaces = {"original": kspace}
+    kspaces["original"] = kspace
 
-    ### --- Downsampling --- ###
     kspace = cylindrical_crop(kspace, axis=axis, factor=0.58)
     kspaces["cylindrical_crop"] = kspace
 
-    # kspace = gaussian_amplification(kspace, axis=0, spread=0.5, centre=0.5, amplitude=1.0)
-    # kspaces["gaussian_amplification"] = kspace
-
-    ### --- Undersampling --- ###
     kspace = radial_undersampling(kspace, axis=axis)
     kspaces["radial_undersampling"] = kspace
 
@@ -55,19 +60,29 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
     kspaces["partial_fourier"] = kspace
-    
+
     ### === Image Domain === ###
     image = convert_to_image(kspace)
     images["k_space_manipulation"] = image
 
     image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
     images["central_brightening"] = image
-    
-    # image = matter_noise(image, path, base_noise=0.005)
-    # images["matter_noise"] = image
 
     image = rician_noise(image, base_noise=0.005)
     images["rician_noise"] = image
+
+    images["final"] = image
+
+    return images, kspaces
+
+core = jax.jit(core, static_argnames=["axis"])
+
+def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
+    ### === Image Domain === ###
+    image = jnp.array(nifti.get_fdata())
+    images = {"original": image}
+
+    images, kspaces = core(image, axis)
 
     # Visualise each stage of the simulation pipeline if requested
     if visualize:
@@ -91,5 +106,5 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
             titles=list(kspaces.keys()))
 
     # Convert the final image to NIfTI format
-    simulated_nifti = nib.Nifti1Image(jax_to_numpy(image), affine=nifti.affine)
-    return simulated_nifti, kspace
+    simulated_nifti = nib.Nifti1Image(jax_to_numpy(images["final"]), affine=nifti.affine)
+    return simulated_nifti
