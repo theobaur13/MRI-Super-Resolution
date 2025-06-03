@@ -44,7 +44,6 @@ def generate_training_data(args):
         
         # Stack images into for parallel processing
         batch_images_np = np.stack(train_images).astype(np.float32)
-        batch_affines = np.array(train_affines)
         batch_images_jax = jnp.array(batch_images_np)
 
         # Simulate batches of images
@@ -53,17 +52,17 @@ def generate_training_data(args):
         # Save simulated images
         for j in range(batch_results["final"].shape[0]):
             final_image = batch_results["final"][j]
-            affine = batch_affines[j]
 
             # Save simulated image to output directory as _LR.nii.gz
-            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.nii.gz")
+            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.npy")
             destination = os.path.join(output_dir, "train", simulated_filename)
-            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), destination)
+            print(f"Saving simulated image to {destination}")
+            np.save(destination, jax_to_numpy(final_image))
 
             # Copy original image to output directory as _HR.nii.gz with shutil
-            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.nii.gz")
+            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.npy")
             destination = os.path.join(output_dir, "train", original_filename)
-            shutil.copy(train_paths[i + j], destination)
+            np.save(destination, train_images[j])
 
     print(f"Simulating {validate_limit} validation scans")
     for i in tqdm(range(0, validate_limit, batch_size)):
@@ -78,7 +77,6 @@ def generate_training_data(args):
         
         # Stack images into for parallel processing
         batch_images_np = np.stack(validate_images).astype(np.float32)
-        batch_affines = np.array(validate_affines)
         batch_images_jax = jnp.array(batch_images_np)
 
         # Simulate batches of images
@@ -87,14 +85,13 @@ def generate_training_data(args):
         # Save simulated images
         for j in range(batch_results["final"].shape[0]):
             final_image = batch_results["final"][j]
-            affine = batch_affines[j]
 
             # Save simulated image to output directory as _LR.nii.gz
-            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.nii.gz")
+            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.npy")
             destination = os.path.join(output_dir, "validate", simulated_filename)
-            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), destination)
+            np.save(destination, jax_to_numpy(final_image))
 
             # Copy original image to output directory as _HR.nii.gz with shutil
-            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.nii.gz")
+            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.npy")
             destination = os.path.join(output_dir, "validate", original_filename)
-            shutil.copy(validate_paths[i + j], destination)
+            np.save(destination, validate_images[j])

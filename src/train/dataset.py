@@ -1,8 +1,8 @@
 import os
-import nibabel as nib
 import numpy as np
-from PIL import Image
 import torchvision.transforms as transforms
+from PIL import Image
+from tqdm import tqdm
 from torch.utils.data import Dataset
 
 class MRIDataset(Dataset):
@@ -27,17 +27,14 @@ class MRIDataset(Dataset):
         files = sorted(os.listdir(self.data_dir))
 
         hr_files = [file for file in files if "_HR" in file]
-        for hr_file in hr_files:
-            base_name = hr_file.replace("_HR.nii.gz", "")
-            lr_file = f"{base_name}_LR.nii.gz"
+        for hr_file in tqdm(hr_files):
+            base_name = hr_file.replace("_HR.npy", "")
+            lr_file = f"{base_name}_LR.npy"
             hr_path = os.path.join(self.data_dir, hr_file)
             lr_path = os.path.join(self.data_dir, lr_file)
 
             if os.path.exists(lr_path):
-                hr_volume = nib.load(hr_path).get_fdata()
-                lr_vol = nib.load(lr_path).get_fdata()
-
-                assert hr_volume.shape == lr_vol.shape, f"Shape mismatch: {hr_volume.shape} vs {lr_vol.shape}"
+                hr_volume = np.load(hr_path)
                 
                 for slice_index in range(hr_volume.shape[self.axis]):
                     self.pairs.append((hr_path, lr_path, slice_index))
@@ -48,8 +45,8 @@ class MRIDataset(Dataset):
     def __getitem__(self, idx):
         hr_path, lr_path, slice_idx = self.pairs[idx]
 
-        hr_volume = nib.load(hr_path).get_fdata()
-        lr_volume = nib.load(lr_path).get_fdata()
+        hr_volume = np.load(hr_path, mmap_mode='r')
+        lr_volume = np.load(lr_path, mmap_mode='r')
 
         hr_slice = hr_volume.take(indices=slice_idx, axis=self.axis)
         lr_slice = lr_volume.take(indices=slice_idx, axis=self.axis)

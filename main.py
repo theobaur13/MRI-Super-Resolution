@@ -83,9 +83,10 @@ if __name__ == "__main__":
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
-    # py main.py train --dataset_dir "E:\data-brats-2024_simulated\train" --axis 2
+    # py main.py train --dataset_dir "E:\data-brats-2024_simulated\train" --output_dir "E:\models" --axis 2
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
     training_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
+    training_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for model and logs")
     training_parser.add_argument("--axis", type=int, default=2, help="Axis for training data")
 
     args = parser.parse_args()

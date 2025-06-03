@@ -3,7 +3,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from src.train.models.ESRGAN import Generator, Discriminator
 
-def loop(epochs, dataloader):
+def loop(epochs, dataloader, output_dir):
     generator = Generator().to("cuda")
     discriminator = Discriminator().to("cuda")
 
@@ -14,7 +14,7 @@ def loop(epochs, dataloader):
     content_loss = nn.L1Loss()
 
     ### --- Pretraining the Generator --- ###
-    pretrain_epochs = 10
+    pretrain_epochs = 5
     for epoch in range(pretrain_epochs):
         for lr, hr in tqdm(dataloader):
             lr, hr = lr.to("cuda"), hr.to("cuda")
@@ -50,6 +50,7 @@ def loop(epochs, dataloader):
             disc_loss.backward()
             disc_optimizer.step()
             tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
+            torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch+1}.pth")
 
             # Train Generator
             sr = generator(lr)
@@ -64,4 +65,8 @@ def loop(epochs, dataloader):
             gen_optimizer.step()
 
             tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
-    print("Training complete.")
+            torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")
+    
+    # Save the model
+    torch.save(generator.state_dict(), f"{output_dir}/generator.pth")
+    torch.save(discriminator.state_dict(), f"{output_dir}/discriminator.pth")
