@@ -38,12 +38,11 @@ class RRDB(nn.Module):
 class Generator(nn.Module):
     def __init__(
             self,
-            in_channels = 2,
-            out_channels = 2,
+            in_channels = 1,
+            out_channels = 1,
             channels = 64,
             growth_channels = 32,
-            rdb_count = 3,
-            rrdb_count = 23,
+            rrdb_count = 6,
         ):
         super(Generator, self).__init__()
         
@@ -85,7 +84,7 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     def __init__(self,
-            in_channels = 2,
+            in_channels = 1,
             leaky_relu_slope = 0.2,
         ):
         super(Discriminator, self).__init__()

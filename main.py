@@ -61,7 +61,7 @@ if __name__ == "__main__":
     analyse_brightness_parser.add_argument("--dataset", type=str, required=False, help="Dataset for conversion (e.g., 'BraSyn', 'GLI')")
 
     # Subparser for generating training data
-    # > py main.py generate-training-data --brats_dir "E:\data-brats-2024" --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100
+    # > py main.py generate-training-data --brats_dir "E:\data-brats-2024" --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100 --seq "t2f"
     generate_training_data_parser = subparsers.add_parser("generate-training-data", help="Generate simulated training data for BraTS")
     generate_training_data_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
     generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
@@ -83,9 +83,10 @@ if __name__ == "__main__":
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
-    # py main.py train --dataset_dir "E:\data-brats-2024_simulated"
+    # py main.py train --dataset_dir "E:\data-brats-2024_simulated\train" --axis 2
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
     training_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
+    training_parser.add_argument("--axis", type=int, default=2, help="Axis for training data")
 
     args = parser.parse_args()
     action = args.action.lower()

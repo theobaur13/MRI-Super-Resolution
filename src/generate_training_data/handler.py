@@ -3,6 +3,7 @@ import numpy as np
 import jax.numpy as jnp
 from tqdm import tqdm
 import nibabel as nib
+import shutil
 from src.simulation.pipeline import simulate_batch
 from src.utils.conversions import jax_to_numpy
 from src.utils.readwrite import read_nifti, write_nifti
@@ -53,8 +54,16 @@ def generate_training_data(args):
         for j in range(batch_results["final"].shape[0]):
             final_image = batch_results["final"][j]
             affine = batch_affines[j]
-            out_path = os.path.join(output_dir, "train", os.path.basename(train_paths[i + j]))
-            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), out_path)
+
+            # Save simulated image to output directory as _LR.nii.gz
+            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.nii.gz")
+            destination = os.path.join(output_dir, "train", simulated_filename)
+            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), destination)
+
+            # Copy original image to output directory as _HR.nii.gz with shutil
+            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.nii.gz")
+            destination = os.path.join(output_dir, "train", original_filename)
+            shutil.copy(train_paths[i + j], destination)
 
     print(f"Simulating {validate_limit} validation scans")
     for i in tqdm(range(0, validate_limit, batch_size)):
@@ -79,5 +88,13 @@ def generate_training_data(args):
         for j in range(batch_results["final"].shape[0]):
             final_image = batch_results["final"][j]
             affine = batch_affines[j]
-            out_path = os.path.join(output_dir, "validate", os.path.basename(validate_paths[i + j]))
-            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), out_path)
+
+            # Save simulated image to output directory as _LR.nii.gz
+            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.nii.gz")
+            destination = os.path.join(output_dir, "validate", simulated_filename)
+            write_nifti(nib.Nifti1Image(jax_to_numpy(final_image), affine), destination)
+
+            # Copy original image to output directory as _HR.nii.gz with shutil
+            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.nii.gz")
+            destination = os.path.join(output_dir, "validate", original_filename)
+            shutil.copy(validate_paths[i + j], destination)

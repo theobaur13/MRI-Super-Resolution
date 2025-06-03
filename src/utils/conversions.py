@@ -26,21 +26,3 @@ def numpy_to_jax(x):
         return jnp.array(x)
     else:
         raise TypeError("Input must be a NumPy array.")
-
-def convert_to_tensor(image_list, slice_axis):
-    real_slices = []
-    imag_slices = []
-
-    for img in image_list:
-        img_np = jnp.array(img)
-        for i in range(img_np.shape[slice_axis]):
-            slice_2d = img_np[i]
-            real_slices.append(slice_2d.real)
-            imag_slices.append(slice_2d.imag)
-    
-    real_slices = jnp.array(real_slices)
-    imag_slices = jnp.array(imag_slices)
-
-    real_tensor = torch.tensor(real_slices, dtype=torch.float32).unsqueeze(1)
-    imag_tensor = torch.tensor(imag_slices, dtype=torch.float32).unsqueeze(1)
-    return torch.cat((real_tensor, imag_tensor), dim=1)
