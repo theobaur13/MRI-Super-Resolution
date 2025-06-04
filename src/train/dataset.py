@@ -1,14 +1,18 @@
-import os
+import lmdb
+import pickle
 import numpy as np
 import torchvision.transforms as transforms
 from PIL import Image
 from tqdm import tqdm
 from torch.utils.data import Dataset
 
-class MRIDataset(Dataset):
-    def __init__(self, data_dir, axis=2):
-        self.data_dir = data_dir
+class LMDBDataset(Dataset):
+    def __init__(self, lmdb_path, axis=2, split="train", limit=10000):
+        self.lmdb_path = lmdb_path
         self.axis = axis
+        self.split = split
+        self.limit = limit
+
         self.pairs = []                 # (HR_path, LR_path, slice_index)
 
         self.hr_transform = transforms.Compose([
@@ -24,41 +28,41 @@ class MRIDataset(Dataset):
         self._gather_slices()
 
     def _gather_slices(self):
-        files = sorted(os.listdir(self.data_dir))
-
-        hr_files = [file for file in files if "_HR" in file]
-        for hr_file in tqdm(hr_files):
-            base_name = hr_file.replace("_HR.npy", "")
-            lr_file = f"{base_name}_LR.npy"
-            hr_path = os.path.join(self.data_dir, hr_file)
-            lr_path = os.path.join(self.data_dir, lr_file)
-
-            if os.path.exists(lr_path):
-                hr_volume = np.load(hr_path)
-                
-                for slice_index in range(hr_volume.shape[self.axis]):
-                    self.pairs.append((hr_path, lr_path, slice_index))
+        with lmdb.open(self.lmdb_path, readonly=True, lock=False) as env:
+            with env.begin() as txn:
+                cursor = txn.cursor()
+                count = 0
+                for key, _ in tqdm(cursor):
+                    key_str = key.decode("utf-8")
+                    if key_str.startswith(f"{self.split}/") and "/HR/" in key_str:
+                        lr_key = key_str.replace("/HR/", "/LR/")
+                        self.pairs.append((lr_key, key_str))
+                        count += 1
+                        if self.limit and count >= self.limit:
+                            break
 
     def __len__(self):
         return len(self.pairs)
 
     def __getitem__(self, idx):
-        hr_path, lr_path, slice_idx = self.pairs[idx]
+        lr_key, hr_key = self.pairs[idx]
 
-        hr_volume = np.load(hr_path, mmap_mode='r')
-        lr_volume = np.load(lr_path, mmap_mode='r')
+        with lmdb.open(self.lmdb_path, readonly=True, lock=False) as env:
+            with env.begin() as txn:
+                lr_slice = pickle.loads(txn.get(lr_key.encode("utf-8")))
+                hr_slice = pickle.loads(txn.get(hr_key.encode("utf-8")))
 
-        hr_slice = hr_volume.take(indices=slice_idx, axis=self.axis)
-        lr_slice = lr_volume.take(indices=slice_idx, axis=self.axis)
-
-        hr_slice = self.normalize_slice(hr_slice)
+        # Normalize
         lr_slice = self.normalize_slice(lr_slice)
+        hr_slice = self.normalize_slice(hr_slice)
 
-        hr_img = Image.fromarray((hr_slice * 255).astype(np.uint8))
+        # Convert to image
         lr_img = Image.fromarray((lr_slice * 255).astype(np.uint8))
+        hr_img = Image.fromarray((hr_slice * 255).astype(np.uint8))
 
-        hr_tensor = self.hr_transform(hr_img)  # [1, 256, 256]
-        lr_tensor = self.lr_transform(lr_img)  # [1, 64, 64]
+        # Transform
+        lr_tensor = self.lr_transform(lr_img)
+        hr_tensor = self.hr_transform(hr_img)
 
         return lr_tensor, hr_tensor
     

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
+from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import peak_signal_noise_ratio as psnr
 from src.train.models.ESRGAN import Generator, Discriminator
 
 def loop(epochs, dataloader, output_dir):
@@ -15,7 +17,7 @@ def loop(epochs, dataloader, output_dir):
 
     ### --- Pretraining the Generator --- ###
     pretrain_epochs = 5
-    for epoch in range(pretrain_epochs):
+    for epoch in tqdm(range(pretrain_epochs)):
         for lr, hr in tqdm(dataloader):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
@@ -25,11 +27,13 @@ def loop(epochs, dataloader, output_dir):
             loss.backward()
             gen_optimizer.step()
 
-            tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
+        tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
     ### --- Adversarial Training --- ###
     for epoch in tqdm(range(epochs)):
-        for lr, hr in dataloader:
+        count = 0
+        for lr, hr in tqdm(dataloader):
+            count += 1
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
             valid = torch.ones((lr.size(0), 1), dtype=torch.float32, device="cuda")
@@ -49,8 +53,6 @@ def loop(epochs, dataloader, output_dir):
             disc_optimizer.zero_grad()
             disc_loss.backward()
             disc_optimizer.step()
-            tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
-            torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch+1}.pth")
 
             # Train Generator
             sr = generator(lr)
@@ -59,14 +61,38 @@ def loop(epochs, dataloader, output_dir):
             gen_adv_loss = adversarial_loss(fake_pred, valid)
 
             gen_content_loss = content_loss(sr, hr)
-            gen_loss = gen_adv_loss + 0.006 * gen_content_loss
+            gen_loss = gen_content_loss + 0.006 * gen_adv_loss
             gen_optimizer.zero_grad()
             gen_loss.backward()
             gen_optimizer.step()
 
-            tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
-            torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")
+            if count % 50 == 0:  # Print every 10 batches
+                # Print losses
+                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
+                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
+
+                # Calculate metrics
+                ssim_avg, psnr_avg = calculate_metrics(sr, hr)
+                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")
+
+                # Save generator state at each epoch
+                torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")
+                torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch+1}.pth")
     
     # Save the model
     torch.save(generator.state_dict(), f"{output_dir}/generator.pth")
     torch.save(discriminator.state_dict(), f"{output_dir}/discriminator.pth")
+
+def calculate_metrics(sr_batch, hr_batch):
+    ssim_total = 0.0
+    psnr_total = 0.0
+    batch_size = sr_batch.size(0)
+
+    for i in range(batch_size):
+        sr_img = sr_batch[i].squeeze().detach().cpu().numpy()
+        hr_img = hr_batch[i].squeeze().detach().cpu().numpy()
+
+        ssim_total += ssim(hr_img, sr_img, data_range=1.0)
+        psnr_total += psnr(hr_img, sr_img, data_range=1.0)
+
+    return ssim_total / batch_size, psnr_total / batch_size

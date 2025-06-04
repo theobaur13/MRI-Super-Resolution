@@ -1,12 +1,12 @@
 import os
+import lmdb
+import pickle
 import numpy as np
 import jax.numpy as jnp
 from tqdm import tqdm
-import nibabel as nib
-import shutil
 from src.simulation.pipeline import simulate_batch
 from src.utils.conversions import jax_to_numpy
-from src.utils.readwrite import read_nifti, write_nifti
+from src.utils.readwrite import read_nifti
 from src.utils.paths import get_brats_paths
 
 def generate_training_data(args):
@@ -16,10 +16,10 @@ def generate_training_data(args):
     limit = args.limit
     axis = args.axis
     seq = args.seq
-    batch_size = 5
+    batch_size = 4
 
-    os.makedirs(os.path.join(output_dir, "train"), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, "validate"), exist_ok=True)
+    map_size = int(50 * 1024 * 1024 * 1024)  # 50 GB
+    env = lmdb.open(output_dir, map_size=map_size)
 
     train_paths, validate_paths = get_brats_paths(brats_dir, seq)
 
@@ -34,64 +34,69 @@ def generate_training_data(args):
     print(f"Simulating {train_limit} training scans")
     for i in tqdm(range(0, train_limit, batch_size)):
         train_images = []
-        train_affines = []
 
         # Read images
         for j in range(i, min(i + batch_size, train_limit)):
             nifti = read_nifti(train_paths[j])
             train_images.append(nifti.get_fdata())
-            train_affines.append(nifti.affine)
         
         # Stack images into for parallel processing
-        batch_images_np = np.stack(train_images).astype(np.float32)
-        batch_images_jax = jnp.array(batch_images_np)
+        batch_np = np.stack(train_images).astype(np.float32)
+        batch_jax = jnp.array(batch_np)
 
         # Simulate batches of images
-        batch_results, _ = simulate_batch(batch_images_jax, axis)
+        batch_results, _ = simulate_batch(batch_jax, axis)
 
         # Save simulated images
         for j in range(batch_results["final"].shape[0]):
-            final_image = batch_results["final"][j]
+            vol_id = os.path.basename(train_paths[i + j]).replace(".nii.gz", "")
+            hr_vol = batch_np[j]
+            lr_vol = jax_to_numpy(batch_results["final"][j])
 
-            # Save simulated image to output directory as _LR.nii.gz
-            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.npy")
-            destination = os.path.join(output_dir, "train", simulated_filename)
-            print(f"Saving simulated image to {destination}")
-            np.save(destination, jax_to_numpy(final_image))
+            with env.begin(write=True) as txn:
+                for s in range(hr_vol.shape[axis]):
+                    hr_slice = np.take(hr_vol, s, axis=axis).astype(np.float32)
+                    lr_slice = np.take(lr_vol, s, axis=axis).astype(np.float32)
 
-            # Copy original image to output directory as _HR.nii.gz with shutil
-            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.npy")
-            destination = os.path.join(output_dir, "train", original_filename)
-            np.save(destination, train_images[j])
+                    hr_key = f"train/{vol_id}/HR/{s:03d}".encode()
+                    lr_key = f"train/{vol_id}/LR/{s:03d}".encode()
+
+                    txn.put(hr_key, pickle.dumps(hr_slice))
+                    txn.put(lr_key, pickle.dumps(lr_slice))
 
     print(f"Simulating {validate_limit} validation scans")
     for i in tqdm(range(0, validate_limit, batch_size)):
         validate_images = []
-        validate_affines = []
 
         # Read images
         for j in range(i, min(i + batch_size, validate_limit)):
             nifti = read_nifti(validate_paths[j])
             validate_images.append(nifti.get_fdata())
-            validate_affines.append(nifti.affine)
         
         # Stack images into for parallel processing
-        batch_images_np = np.stack(validate_images).astype(np.float32)
-        batch_images_jax = jnp.array(batch_images_np)
+        batch_np = np.stack(validate_images).astype(np.float32)
+        batch_jax = jnp.array(batch_np)
 
         # Simulate batches of images
-        batch_results, _ = simulate_batch(batch_images_jax, axis)
+        batch_results, _ = simulate_batch(batch_jax, axis)
 
         # Save simulated images
         for j in range(batch_results["final"].shape[0]):
-            final_image = batch_results["final"][j]
+            vol_id = os.path.basename(validate_paths[i + j]).replace(".nii.gz", "")
+            hr_vol = batch_np[j]
+            lr_vol = jax_to_numpy(batch_results["final"][j])
 
-            # Save simulated image to output directory as _LR.nii.gz
-            simulated_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_LR.npy")
-            destination = os.path.join(output_dir, "validate", simulated_filename)
-            np.save(destination, jax_to_numpy(final_image))
+            with env.begin(write=True) as txn:
+                for s in range(hr_vol.shape[axis]):
+                    hr_slice = np.take(hr_vol, s, axis=axis).astype(np.float32)
+                    lr_slice = np.take(lr_vol, s, axis=axis).astype(np.float32)
 
-            # Copy original image to output directory as _HR.nii.gz with shutil
-            original_filename = os.path.basename(train_paths[i + j]).replace(".nii.gz", f"_HR.npy")
-            destination = os.path.join(output_dir, "validate", original_filename)
-            np.save(destination, validate_images[j])
+                    hr_key = f"validate/{vol_id}/HR/{s:03d}".encode()
+                    lr_key = f"validate/{vol_id}/LR/{s:03d}".encode()
+
+                    txn.put(hr_key, pickle.dumps(hr_slice))
+                    txn.put(lr_key, pickle.dumps(lr_slice))
+    
+    env.sync()
+    env.close()
+    print(f"LMDB dataset written to {output_dir}")
