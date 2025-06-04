@@ -17,9 +17,12 @@ def train(args):
     NUM_WORKERS = 4
     LIMIT = 20000           # NOTE: Set to None for no limit
 
-    dataset = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, limit=LIMIT)
-    print(f"Total slices in dataset: {len(dataset)}")  
+    train_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis,split="train", limit=LIMIT)
+    val_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, split="validate", limit=LIMIT * 0.25)
+    print(f"Total slices in training dataset: {len(train_data)}")
+    print(f"Total slices in validation dataset: {len(val_data)}")
 
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS)
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS)
+    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS)
 
-    loop(epochs=EPOCHS, dataloader=dataloader, output_dir=output_dir)
+    loop(train_loader, val_loader, epochs=EPOCHS, output_dir=output_dir, resume=args.resume)
