@@ -7,6 +7,7 @@ from src.train.handler import train
 from src.segment.handler import segment
 from src.convert_adni.handler import convert_adni
 from src.generate_training_data.handler import generate_training_data
+from src.run.handler import run_model
 
 if __name__ == "__main__":
     # Set up directories
@@ -88,6 +89,16 @@ if __name__ == "__main__":
     training_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
     training_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for model and logs")
     training_parser.add_argument("--axis", type=int, default=2, help="Axis for training data")
+    training_parser.add_argument("--resume", type=bool, default=False, help="Whether to resume training from a checkpoint")
+
+    # Subparser for running a model
+    # py main.py run --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --axis 2 --slice 24
+    run_parser = subparsers.add_parser("run", help="Run a model on a slice")
+    run_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    run_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    run_parser.add_argument("--vol_name", type=str, default="validate", help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    run_parser.add_argument("--axis", type=int, default=2, help="Axis for running the model")
+    run_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
 
     args = parser.parse_args()
     action = args.action.lower()
@@ -119,3 +130,7 @@ if __name__ == "__main__":
     # Train a model on the dataset
     elif action == "train":
         train(args)
+
+    # Run a model on a slice
+    elif action == "run":
+        run_model(args)
