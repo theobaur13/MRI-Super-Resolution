@@ -16,38 +16,48 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
     adversarial_loss = nn.BCEWithLogitsLoss()
     content_loss = nn.L1Loss()
 
+    pretrain_epochs = 3
+    resume_pretrain_epoch = 0
+
     if resume:
         models = os.listdir(output_dir)
         generators = [m for m in models if m.startswith("generator")]
         discriminators = [m for m in models if m.startswith("discriminator")]
+        pretrain_gens = [m for m in models if m.startswith("pretrain")]
 
         if generators:
             latest_gen = sorted(generators, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
             generator.load_state_dict(torch.load(os.path.join(output_dir, latest_gen)))
             resume_epoch = int(latest_gen.split('_')[-1].split('.')[0])
+            resume_pretrain_epoch = pretrain_epochs
             tqdm.write(f"Resuming Generator from epoch {resume_epoch}")
         
         if discriminators:
             latest_disc = sorted(discriminators, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
             discriminator.load_state_dict(torch.load(os.path.join(output_dir, latest_disc)))
+            resume_pretrain_epoch = pretrain_epochs
             tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
-        
-    else:
-        ### --- Pretraining the Generator --- ###
-        pretrain_epochs = 5
-        for epoch in tqdm(range(pretrain_epochs)):
-            for lr, hr in tqdm(train_loader):
-                lr, hr = lr.to("cuda"), hr.to("cuda")
 
-                sr = generator(lr)
-                loss = nn.L1Loss()(sr, hr)
-                gen_optimizer.zero_grad()
-                loss.backward()
-                gen_optimizer.step()
+        if pretrain_gens:
+            latest_pretrain = sorted(pretrain_gens, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
+            resume_pretrain_epoch = int(latest_pretrain.split('_')[-1].split('.')[0])
+            tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
+    
+    ### --- Pretraining the Generator --- ###
+    for epoch in tqdm(range(resume_pretrain_epoch, pretrain_epochs)):
+        for lr, hr in tqdm(train_loader):
+            lr, hr = lr.to("cuda"), hr.to("cuda")
 
-            tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
+            sr = generator(lr)
+            loss = nn.L1Loss()(sr, hr)
+            gen_optimizer.zero_grad()
+            loss.backward()
+            gen_optimizer.step()
 
-        resume_epoch = 0
+        torch.save(generator.state_dict(), f"{output_dir}/pretrain_epoch_{epoch+1}.pth")
+        tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
+
+    resume_epoch = 0
 
     ### --- Adversarial Training --- ###
     best_ssim = 0.0
@@ -98,11 +108,11 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
             gen_loss.backward()
             gen_optimizer.step()
 
-            if count % 500 == 0:  # Print every 500 batches
-                # Losses
+            if count % 100 == 0:  # Print every 100 batches
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
 
+            if count % 1428 == 0:  # Print every 500 batches
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")

@@ -57,17 +57,6 @@ class Generator(nn.Module):
         # After RRDB blocks
         self.trunk_conv = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
 
-        # Upsampling layers
-        self.upsample = nn.Sequential(
-            nn.Conv2d(channels, channels * 4, kernel_size=3, stride=1, padding=1),
-            nn.PixelShuffle(2),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(channels, channels * 4, kernel_size=3, stride=1, padding=1),
-            nn.PixelShuffle(2),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
         # Final conv layers
         self.conv_hr = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
         self.conv_last = nn.Conv2d(channels, out_channels, kernel_size=3, stride=1, padding=1)
@@ -77,7 +66,6 @@ class Generator(nn.Module):
         trunk = self.trunk_conv(self.rrdb_trunk(identity))
         x = identity + trunk
 
-        x = self.upsample(x)
         x = self.leaky_relu(self.conv_hr(x))
         x = self.conv_last(x)
         return x

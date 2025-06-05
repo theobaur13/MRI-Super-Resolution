@@ -12,10 +12,10 @@ def train(args):
         os.makedirs(output_dir)
 
     # Constants
-    BATCH_SIZE = 20         # NOTE: Anything over 20 dips into normal RAM over VRAM
-    EPOCHS = 15
+    BATCH_SIZE = 3
+    EPOCHS = 20
     NUM_WORKERS = 4
-    LIMIT = 20000           # NOTE: Set to None for no limit
+    LIMIT = 20000
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis,split="train", limit=LIMIT)
     val_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, split="validate", limit=LIMIT * 0.25)
