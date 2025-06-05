@@ -17,6 +17,7 @@ def generate_training_data(args):
     axis = args.axis
     seq = args.seq
     batch_size = 4
+    useful_range = (20, 140)
 
     map_size = int(50 * 1024 * 1024 * 1024)  # 50 GB
     env = lmdb.open(output_dir, map_size=map_size)
@@ -54,7 +55,7 @@ def generate_training_data(args):
             lr_vol = jax_to_numpy(batch_results["final"][j])
 
             with env.begin(write=True) as txn:
-                for s in range(hr_vol.shape[axis]):
+                for s in range(useful_range[0], useful_range[1]):
                     hr_slice = np.take(hr_vol, s, axis=axis).astype(np.float32)
                     lr_slice = np.take(lr_vol, s, axis=axis).astype(np.float32)
 
@@ -87,7 +88,7 @@ def generate_training_data(args):
             lr_vol = jax_to_numpy(batch_results["final"][j])
 
             with env.begin(write=True) as txn:
-                for s in range(hr_vol.shape[axis]):
+                for s in range(useful_range[0], useful_range[1]):
                     hr_slice = np.take(hr_vol, s, axis=axis).astype(np.float32)
                     lr_slice = np.take(lr_vol, s, axis=axis).astype(np.float32)
 
