@@ -41,13 +41,13 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
 
     ### === k-Space Domain === ###
     kspace = convert_to_kspace(image)
-    kspaces["original"] = kspace
+    kspaces["1_original"] = kspace
 
     kspace = cylindrical_crop(kspace, axis=axis, factor=0.58)
-    kspaces["cylindrical_crop"] = kspace
+    kspaces["2_cylindrical_crop"] = kspace
 
     kspace = radial_undersampling(kspace, axis=axis)
-    kspaces["radial_undersampling"] = kspace
+    kspaces["3_radial_undersampling"] = kspace
 
     # kspace = spiral_undersampling(kspace, axis=axis)
     # kspaces["spiral_undersampling"] = kspace
@@ -59,17 +59,17 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     # kspaces["variable_density_undersampling"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
-    kspaces["partial_fourier"] = kspace
+    kspaces["4_partial_fourier"] = kspace
 
     ### === Image Domain === ###
     image = convert_to_image(kspace)
-    images["k_space_manipulation"] = image
+    images["1_k_space_manipulation"] = image
 
-    image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
-    images["central_brightening"] = image
+    # image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
+    # images["2_central_brightening"] = image
 
     image = rician_noise(image, base_noise=0.005)
-    images["rician_noise"] = image
+    images["3_rician_noise"] = image
 
     images["final"] = image
 
