@@ -5,6 +5,8 @@ from tqdm import tqdm
 from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from src.train.models.ESRGAN import Generator, Discriminator
+from src.utils.readwrite import log_to_csv
+from src.display.plot import plot_training_log
 
 def loop(train_loader, val_loader, epochs, output_dir, resume=False):
     generator = Generator().to("cuda")
@@ -16,8 +18,9 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
     adversarial_loss = nn.BCEWithLogitsLoss()
     content_loss = nn.L1Loss()
 
-    pretrain_epochs = 3
+    pretrain_epochs = 4
     resume_pretrain_epoch = 0
+    resume_epoch = 0
 
     if resume:
         models = os.listdir(output_dir)
@@ -43,6 +46,8 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
             resume_pretrain_epoch = int(latest_pretrain.split('_')[-1].split('.')[0])
             tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
     
+    log_file = os.path.join(output_dir, "history.csv")
+
     ### --- Pretraining the Generator --- ###
     for epoch in tqdm(range(resume_pretrain_epoch, pretrain_epochs)):
         for lr, hr in tqdm(train_loader):
@@ -57,20 +62,9 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
         torch.save(generator.state_dict(), f"{output_dir}/pretrain_epoch_{epoch+1}.pth")
         tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
-    resume_epoch = 0
-
     ### --- Adversarial Training --- ###
     best_ssim = 0.0
     best_psnr = 0.0
-
-    history = {
-        'gen_loss': [],
-        'disc_loss': [],
-        'train_ssim': [],
-        'train_psnr': [],
-        'val_ssim': [],
-        'val_psnr': []
-    }
 
     for epoch in tqdm(range(resume_epoch, epochs)):
         count = 0
@@ -112,6 +106,17 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
 
+                log_to_csv(log_file, {
+                    "epoch": epoch + 1,
+                    "batch": count,
+                    "gen_loss": gen_loss.item(),
+                    "disc_loss": disc_loss.item(),
+                    "train_ssim": "",
+                    "train_psnr": "",
+                    "val_ssim": "",
+                    "val_psnr": ""
+                })
+
             if count % 1428 == 0:  # Print every 500 batches
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
@@ -144,21 +149,20 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
                         torch.save(discriminator.state_dict(), f"{output_dir}/best_discriminator_psnr.pth")
                         tqdm.write(f"New best PSNR: {best_psnr:.4f}, model saved.")
 
-                    # Save history
-                    history['gen_loss'].append(gen_loss.item())
-                    history['disc_loss'].append(disc_loss.item())
-                    history['train_ssim'].append(ssim_avg)
-                    history['train_psnr'].append(psnr_avg)
-                    history['val_ssim'].append(val_ssim_avg)
-                    history['val_psnr'].append(val_psnr_avg)
+                # Log metrics
+                log_to_csv(log_file, {
+                    "epoch": epoch + 1,
+                    "batch": count,
+                    "gen_loss": gen_loss.item(),
+                    "disc_loss": disc_loss.item(),
+                    "train_ssim": ssim_avg,
+                    "train_psnr": psnr_avg,
+                    "val_ssim": val_ssim_avg,
+                    "val_psnr": val_psnr_avg
+                })
 
-                    # Save history to file
-                    with open(f"{output_dir}/history.txt", "w") as f:
-                        f.write(f"Epoch {epoch+1}\n")
-                        f.write(f"Generator Loss: {gen_loss.item():.4f}\n")
-                        f.write(f"Discriminator Loss: {disc_loss.item():.4f}\n")
-                        f.write(f"Training SSIM: {ssim_avg:.4f}, PSNR: {psnr_avg:.4f}\n")
-                        f.write(f"Validation SSIM: {val_ssim_avg:.4f}, PSNR: {val_psnr_avg:.4f}\n")
+                # Plot training log
+                plot_training_log(log_file, output_dir=output_dir)
 
                 # Save generator state
                 torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")

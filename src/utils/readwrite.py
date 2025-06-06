@@ -1,6 +1,8 @@
 import nibabel as nib
 import jax.numpy as jnp
 import numpy as np
+import os
+import csv
 
 def read_nifti(file_path, brats=False, normalise=True):
     nifti = nib.load(file_path)
@@ -28,3 +30,11 @@ def read_nifti(file_path, brats=False, normalise=True):
 
 def write_nifti(nifti, file_path):
     nib.save(nifti, file_path)
+
+def log_to_csv(file_path, row, header=False):
+    file_exists = os.path.exists(file_path)
+    with open(file_path, 'a', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=row.keys())
+        if header and not file_exists:
+            writer.writeheader()
+        writer.writerow(row)

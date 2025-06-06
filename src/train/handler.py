@@ -12,7 +12,7 @@ def train(args):
         os.makedirs(output_dir)
 
     # Constants
-    BATCH_SIZE = 3
+    BATCH_SIZE = 4
     EPOCHS = 20
     NUM_WORKERS = 4
     LIMIT = 20000

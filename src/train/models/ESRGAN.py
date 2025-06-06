@@ -42,7 +42,7 @@ class Generator(nn.Module):
             out_channels = 1,
             channels = 64,
             growth_channels = 32,
-            rrdb_count = 6,
+            rrdb_count = 3,
         ):
         super(Generator, self).__init__()
         
