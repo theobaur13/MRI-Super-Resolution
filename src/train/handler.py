@@ -18,7 +18,7 @@ def train(args):
     LIMIT = 20000
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis,split="train", limit=LIMIT)
-    val_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, split="validate", limit=LIMIT * 0.25)
+    val_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, split="validate", limit=LIMIT * 0.33)
     print(f"Total slices in training dataset: {len(train_data)}")
     print(f"Total slices in validation dataset: {len(val_data)}")
 

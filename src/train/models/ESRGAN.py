@@ -4,17 +4,13 @@ import torch.nn as nn
 class ResidualDenseBlock(nn.Module):
     def __init__(self, in_channels, growth_channels):
         super(ResidualDenseBlock, self).__init__()
-        kernel = 3
-        stride = 1
-        padding = 1
-
         self.leaky_relu = nn.LeakyReLU(0.2, True)
 
-        self.conv1 = nn.Conv2d(in_channels, growth_channels, kernel_size=kernel, stride=stride, padding=padding)
-        self.conv2 = nn.Conv2d(in_channels + (growth_channels * 1), growth_channels, kernel_size=kernel, stride=stride, padding=padding)
-        self.conv3 = nn.Conv2d(in_channels + (growth_channels * 2), growth_channels, kernel_size=kernel, stride=stride, padding=padding)
-        self.conv4 = nn.Conv2d(in_channels + (growth_channels * 3), growth_channels, kernel_size=kernel, stride=stride, padding=padding)
-        self.conv5 = nn.Conv2d(in_channels + (growth_channels * 4), in_channels, kernel_size=kernel, stride=stride, padding=padding)
+        self.conv1 = nn.Conv2d(in_channels, growth_channels, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels + (growth_channels * 1), growth_channels, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(in_channels + (growth_channels * 2), growth_channels, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(in_channels + (growth_channels * 3), growth_channels, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(in_channels + (growth_channels * 4), in_channels, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         x1 = self.leaky_relu(self.conv1(x))
@@ -39,7 +35,6 @@ class Generator(nn.Module):
     def __init__(
             self,
             in_channels = 1,
-            out_channels = 1,
             channels = 64,
             growth_channels = 32,
             rrdb_count = 3,
@@ -59,7 +54,7 @@ class Generator(nn.Module):
 
         # Final conv layers
         self.conv_hr = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
-        self.conv_last = nn.Conv2d(channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.conv_last = nn.Conv2d(channels, out_channels=1, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         identity = self.conv1(x)
@@ -72,8 +67,7 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     def __init__(self,
-            in_channels = 1,
-            leaky_relu_slope = 0.2,
+            in_channels = 1
         ):
         super(Discriminator, self).__init__()
 
@@ -81,12 +75,12 @@ class Discriminator(nn.Module):
             return nn.Sequential(
                 nn.Conv2d(in_feat, out_feat, kernel_size=3, stride=stride, padding=1),
                 nn.BatchNorm2d(out_feat),
-                nn.LeakyReLU(leaky_relu_slope, inplace=True)
+                nn.LeakyReLU(0.2, inplace=True)
             )
 
         self.features = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
-            nn.LeakyReLU(leaky_relu_slope, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
 
             conv_block(64, 64, stride=2),
             conv_block(64, 128, stride=1),
@@ -101,7 +95,7 @@ class Discriminator(nn.Module):
             nn.AdaptiveAvgPool2d((4, 4)),  
             nn.Flatten(),
             nn.Linear(512 * 4 * 4, 100),
-            nn.LeakyReLU(leaky_relu_slope, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(100, 1)
         )
 

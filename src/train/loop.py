@@ -7,16 +7,11 @@ from skimage.metrics import peak_signal_noise_ratio as psnr
 from src.train.models.ESRGAN import Generator, Discriminator
 from src.utils.readwrite import log_to_csv
 from src.display.plot import plot_training_log
+from src.train.loss import CompositeLoss, gradient_penalty
 
 def loop(train_loader, val_loader, epochs, output_dir, resume=False):
     generator = Generator().to("cuda")
     discriminator = Discriminator().to("cuda")
-
-    gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-    disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-
-    adversarial_loss = nn.BCEWithLogitsLoss()
-    content_loss = nn.L1Loss()
 
     pretrain_epochs = 4
     resume_pretrain_epoch = 0
@@ -27,6 +22,11 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
         generators = [m for m in models if m.startswith("generator")]
         discriminators = [m for m in models if m.startswith("discriminator")]
         pretrain_gens = [m for m in models if m.startswith("pretrain")]
+
+        if pretrain_gens:
+            latest_pretrain = sorted(pretrain_gens, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
+            resume_pretrain_epoch = int(latest_pretrain.split('_')[-1].split('.')[0])
+            tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
 
         if generators:
             latest_gen = sorted(generators, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
@@ -40,13 +40,12 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
             discriminator.load_state_dict(torch.load(os.path.join(output_dir, latest_disc)))
             resume_pretrain_epoch = pretrain_epochs
             tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
-
-        if pretrain_gens:
-            latest_pretrain = sorted(pretrain_gens, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
-            resume_pretrain_epoch = int(latest_pretrain.split('_')[-1].split('.')[0])
-            tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
     
     log_file = os.path.join(output_dir, "history.csv")
+
+    gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
+    disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
+    content_loss = CompositeLoss()
 
     ### --- Pretraining the Generator --- ###
     for epoch in tqdm(range(resume_pretrain_epoch, pretrain_epochs)):
@@ -72,19 +71,15 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
             count += 1
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
-            valid = torch.ones((lr.size(0), 1), dtype=torch.float32, device="cuda")
-            fake = torch.zeros((lr.size(0), 1), dtype=torch.float32, device="cuda")
-
             # Train Discriminator
-            with torch.no_grad():
-                sr = generator(lr)
+            sr = generator(lr).detach()
 
             real_pred = discriminator(hr)
-            fake_pred = discriminator(sr.detach())
+            fake_pred = discriminator(sr)
 
-            real_loss = adversarial_loss(real_pred, valid)
-            fake_loss = adversarial_loss(fake_pred, fake)
-            disc_loss = (real_loss + fake_loss) / 2
+            gp = gradient_penalty(discriminator, hr, sr, device="cuda", lambda_gp=10)
+
+            disc_loss = fake_pred.mean() - real_pred.mean() + gp
 
             disc_optimizer.zero_grad()
             disc_loss.backward()
@@ -92,12 +87,13 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
 
             # Train Generator
             sr = generator(lr)
-            real_pred = discriminator(hr)
             fake_pred = discriminator(sr)
-            gen_adv_loss = adversarial_loss(fake_pred, valid)
+
+            gen_adv_loss = -fake_pred.mean()
 
             gen_content_loss = content_loss(sr, hr)
-            gen_loss = gen_content_loss + 0.006 * gen_adv_loss
+            gen_loss = gen_content_loss + 0.001 * gen_adv_loss
+            
             gen_optimizer.zero_grad()
             gen_loss.backward()
             gen_optimizer.step()
@@ -117,7 +113,7 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
                     "val_psnr": ""
                 })
 
-            if count % 1428 == 0:  # Print every 500 batches
+            if count % 4999 == 0:
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")
@@ -162,7 +158,7 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
                 })
 
                 # Plot training log
-                plot_training_log(log_file, output_dir=output_dir)
+                # plot_training_log(log_file, output_dir=output_dir)
 
                 # Save generator state
                 torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")
