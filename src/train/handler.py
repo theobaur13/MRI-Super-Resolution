@@ -13,7 +13,7 @@ def train(args):
 
     # Constants
     BATCH_SIZE = 4
-    EPOCHS = 20
+    EPOCHS = 25
     NUM_WORKERS = 4
     LIMIT = 20000
 

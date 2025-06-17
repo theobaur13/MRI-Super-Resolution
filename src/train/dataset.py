@@ -5,6 +5,8 @@ import torchvision.transforms as transforms
 from PIL import Image
 from tqdm import tqdm
 from torch.utils.data import Dataset
+import torchvision.transforms.functional as TF
+import random
 
 class LMDBDataset(Dataset):
     def __init__(self, lmdb_path, axis=2, split="train", limit=10000):
@@ -12,6 +14,7 @@ class LMDBDataset(Dataset):
         self.axis = axis
         self.split = split
         self.limit = limit
+        self.do_augment = split == "train"
 
         self.pairs = []                 # (HR_path, LR_path, slice_index)
 
@@ -64,6 +67,10 @@ class LMDBDataset(Dataset):
         lr_tensor = self.lr_transform(lr_img)
         hr_tensor = self.hr_transform(hr_img)
 
+        # Augmentation
+        if self.do_augment:
+            lr_tensor, hr_tensor = self.augment_pair(lr_tensor, hr_tensor)
+
         return lr_tensor, hr_tensor
     
     def normalize_slice(self, slice_2d):
@@ -72,3 +79,20 @@ class LMDBDataset(Dataset):
             return np.zeros_like(slice_2d)
         norm = (slice_2d - np.min(slice_2d)) / (np.max(slice_2d) - np.min(slice_2d))
         return norm
+    
+    def augment_pair(self, lr_img, hr_img):
+        # Random horizontal flip
+        if random.random() > 0.5:
+            lr_img = TF.hflip(lr_img)
+            hr_img = TF.hflip(hr_img)
+
+        # Random vertical flip
+        if random.random() > 0.5:
+            lr_img = TF.vflip(lr_img)
+            hr_img = TF.vflip(hr_img)
+
+        # Random rotation (90, 180, 270 degrees)
+        if random.random() > 0.5:
+            angle = random.choice([90, 180, 270])
+            lr_img = TF.rotate(lr_img, angle)
+            hr_img = TF.rotate(hr_img, angle)
