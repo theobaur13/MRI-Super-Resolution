@@ -12,8 +12,9 @@ def train(args):
         os.makedirs(output_dir)
 
     # Constants
-    BATCH_SIZE = 4
+    BATCH_SIZE = 8
     EPOCHS = 25
+    PRETRAIN_EPOCHS = 4
     NUM_WORKERS = 4
     LIMIT = 20000
 
@@ -25,4 +26,4 @@ def train(args):
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS)
 
-    loop(train_loader, val_loader, epochs=EPOCHS, output_dir=output_dir, resume=args.resume)
+    loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, output_dir=output_dir, resume=args.resume)

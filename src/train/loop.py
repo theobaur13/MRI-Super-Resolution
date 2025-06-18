@@ -9,43 +9,23 @@ from src.utils.readwrite import log_to_csv
 from src.display.plot import plot_training_log
 from src.train.loss import CompositeLoss, gradient_penalty
 
-def loop(train_loader, val_loader, epochs, output_dir, resume=False):
+def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=False):
+    # Initialize models
     generator = Generator().to("cuda")
     discriminator = Discriminator().to("cuda")
 
-    pretrain_epochs = 4
+    # Initialize logging and resume settings
     resume_pretrain_epoch = 0
     resume_epoch = 0
-
-    if resume:
-        models = os.listdir(output_dir)
-        generators = [m for m in models if m.startswith("generator")]
-        discriminators = [m for m in models if m.startswith("discriminator")]
-        pretrain_gens = [m for m in models if m.startswith("pretrain")]
-
-        if pretrain_gens:
-            latest_pretrain = sorted(pretrain_gens, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
-            resume_pretrain_epoch = int(latest_pretrain.split('_')[-1].split('.')[0])
-            tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
-
-        if generators:
-            latest_gen = sorted(generators, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
-            generator.load_state_dict(torch.load(os.path.join(output_dir, latest_gen)))
-            resume_epoch = int(latest_gen.split('_')[-1].split('.')[0])
-            resume_pretrain_epoch = pretrain_epochs
-            tqdm.write(f"Resuming Generator from epoch {resume_epoch}")
-        
-        if discriminators:
-            latest_disc = sorted(discriminators, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
-            discriminator.load_state_dict(torch.load(os.path.join(output_dir, latest_disc)))
-            resume_pretrain_epoch = pretrain_epochs
-            tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
-    
     log_file = os.path.join(output_dir, "history.csv")
 
+    # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     content_loss = CompositeLoss()
+
+    if resume:
+        resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
 
     ### --- Pretraining the Generator --- ###
     for epoch in tqdm(range(resume_pretrain_epoch, pretrain_epochs)):
@@ -62,13 +42,11 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
         tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
     ### --- Adversarial Training --- ###
-    best_ssim = 0.0
-    best_psnr = 0.0
+    best_ssim, best_psnr = 0.0, 0.0
 
     for epoch in tqdm(range(resume_epoch, epochs)):
         count = 0
         for lr, hr in tqdm(train_loader):
-            count += 1
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
             # Train Discriminator
@@ -98,7 +76,8 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
             gen_loss.backward()
             gen_optimizer.step()
 
-            if count % 100 == 0:  # Print every 100 batches
+            count += 1
+            if count % int(len(train_loader) / 10) == 0:  # Print every 10% of the set
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
 
@@ -113,7 +92,7 @@ def loop(train_loader, val_loader, epochs, output_dir, resume=False):
                     "val_psnr": ""
                 })
 
-            if count % 4999 == 0:
+            if count % int(len(train_loader) / 50) == 0:  # Print every 50% of the set
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")
@@ -181,3 +160,33 @@ def calculate_metrics(sr_batch, hr_batch):
         psnr_total += psnr(hr_img, sr_img, data_range=1.0)
 
     return ssim_total / batch_size, psnr_total / batch_size
+
+def resume_models(generator, discriminator, output_dir, pretrain_epochs):
+    models = os.listdir(output_dir)
+    resume_pretrain_epoch = 0 
+    resume_epoch = 0
+
+    def get_latest(name):
+        filtered = [m for m in models if m.startswith(name)]
+        return max(filtered, key=lambda x: int(x.split('_')[-1].split('.')[0])) if filtered else None
+    
+    pretrain_generator = get_latest("pretrain")
+    if pretrain_generator:
+        resume_pretrain_epoch = int(pretrain_generator.split('_')[-1].split('.')[0])
+        generator.load_state_dict(torch.load(os.path.join(output_dir, pretrain_generator)))
+        tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
+
+    generator_model = get_latest("generator")
+    if generator_model:
+        generator.load_state_dict(torch.load(os.path.join(output_dir, generator_model)))
+        resume_epoch = int(generator_model.split('_')[-1].split('.')[0])
+        resume_pretrain_epoch = pretrain_epochs
+        tqdm.write(f"Resuming Generator from epoch {resume_epoch}")
+
+    discriminator_model = get_latest("discriminator")
+    if discriminator_model:
+        discriminator.load_state_dict(torch.load(os.path.join(output_dir, discriminator_model)))
+        resume_pretrain_epoch = pretrain_epochs
+        tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
+
+    return resume_pretrain_epoch, resume_epoch

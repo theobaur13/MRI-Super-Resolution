@@ -96,3 +96,5 @@ class LMDBDataset(Dataset):
             angle = random.choice([90, 180, 270])
             lr_img = TF.rotate(lr_img, angle)
             hr_img = TF.rotate(hr_img, angle)
+
+        return lr_img, hr_img
