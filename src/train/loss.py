@@ -57,7 +57,12 @@ class CompositeLoss(nn.Module):
         return torch.mean(edge_map * torch.abs(sr - hr))
 
     def pixel_loss(self, sr, hr):
-        return self.l1(sr, hr)  # Only L1 loss used here
+        return self.l1(sr, hr)
+
+    def fourier_loss(lr, hr):
+        lr_fft = torch.fft.fft2(lr)
+        hr_fft = torch.fft.fft2(hr)
+        return torch.mean((torch.abs(lr_fft) - torch.abs(hr_fft)) ** 2)
 
     def forward(self, sr, hr):
         loss = 0.0
