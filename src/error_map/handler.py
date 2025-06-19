@@ -9,24 +9,19 @@ def error_map(args):
     model_path = args.model_path
     lmdb_path = args.lmdb_path
     vol_name = args.vol_name
-    axis = args.axis
     slice_index = args.slice
     
     # Load the generator model
     generator = Generator().to("cuda")
     generator.load_state_dict(torch.load(model_path, map_location="cuda"))
 
-    # Retrieve the HR and LR slices from the LMDB database
+    hr_key = f"train/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
+    lr_key = f"train/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
+
     with lmdb.open(lmdb_path, readonly=True, lock=False) as env:
         with env.begin() as txn:
-            cursor = txn.cursor()
-            for key, value in cursor:
-                key_str = key.decode("utf-8")
-                if key_str.startswith(f"train/{vol_name}/HR/") and f"/{slice_index:03d}" in key_str:
-                    hr_slice = pickle.loads(value)
-                if key_str.startswith(f"train/{vol_name}/LR/") and f"/{slice_index:03d}" in key_str:
-                    lr_slice = pickle.loads(value)
-                    break
+            hr_slice = pickle.loads(txn.get(hr_key))
+            lr_slice = pickle.loads(txn.get(lr_key))
 
     # Convert LR slice to tensor and run through the generator
     lr_tensor = torch.tensor(lr_slice).unsqueeze(0).unsqueeze(0).to("cuda")
@@ -36,8 +31,10 @@ def error_map(args):
     sr_slice = sr_tensor.squeeze().cpu().numpy()
     hr_slice = hr_slice.squeeze()
 
-    # Calculate the MSE map
-    mse_map = (hr_slice - sr_slice) ** 2
+    # Calculate the MAE map
+    map = (hr_slice - sr_slice) ** 2
+
+    #TODO: Add Sobel edge loss and perceptual loss
 
     # Plotting the MSE heatmap using mse_map
     plt.figure(figsize=(10, 5))
@@ -59,9 +56,9 @@ def error_map(args):
 
     plt.figure(figsize=(6, 6))
     plt.subplot(1, 1, 1)
-    plt.imshow(mse_map, cmap='hot', vmin=0, vmax=mse_map.max())
-    plt.title('MSE Map')
-    plt.colorbar(label='Mean Squared Error')
+    plt.imshow(map, cmap='hot', vmin=0, vmax=map.max())
+    plt.title('Map')
+    plt.colorbar(label='Error')
 
     plt.tight_layout()
-    plt.show()        
+    plt.show()

@@ -8,22 +8,18 @@ def run_model(args):
     model_path = args.model_path
     lmdb_path = args.lmdb_path
     vol_name = args.vol_name
-    axis = args.axis
     slice_index = args.slice
 
     generator = Generator().to("cuda")
     generator.load_state_dict(torch.load(model_path, map_location="cuda"))
 
+    hr_key = f"train/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
+    lr_key = f"train/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
+
     with lmdb.open(lmdb_path, readonly=True, lock=False) as env:
         with env.begin() as txn:
-            cursor = txn.cursor()
-            for key, value in cursor:
-                key_str = key.decode("utf-8")
-                if key_str.startswith(f"train/{vol_name}/HR/") and f"/{slice_index:03d}" in key_str:
-                    hr_slice = pickle.loads(value)
-                if key_str.startswith(f"train/{vol_name}/LR/") and f"/{slice_index:03d}" in key_str:
-                    lr_slice = pickle.loads(value)
-                    break
+            hr_slice = pickle.loads(txn.get(hr_key))
+            lr_slice = pickle.loads(txn.get(lr_key))
 
     lr_tensor = torch.tensor(lr_slice).unsqueeze(0).unsqueeze(0).to("cuda")
     with torch.no_grad():
