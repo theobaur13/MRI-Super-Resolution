@@ -8,6 +8,7 @@ from src.segment.handler import segment
 from src.convert_adni.handler import convert_adni
 from src.generate_training_data.handler import generate_training_data
 from src.run.handler import run_model
+from src.error_map.handler import error_map
 
 if __name__ == "__main__":
     # Set up directories
@@ -100,6 +101,15 @@ if __name__ == "__main__":
     run_parser.add_argument("--axis", type=int, default=2, help="Axis for running the model")
     run_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
 
+    # Subparser for error map
+    # py main.py error --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --axis 2 --slice 24
+    loss_parser = subparsers.add_parser("error", help="Calculate error map for a model")
+    loss_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    loss_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    loss_parser.add_argument("--vol_name", type=str, default="validate", help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    loss_parser.add_argument("--axis", type=int, default=2, help="Axis for running the model")
+    loss_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
+
     args = parser.parse_args()
     action = args.action.lower()
 
@@ -134,3 +144,7 @@ if __name__ == "__main__":
     # Run a model on a slice
     elif action == "run":
         run_model(args)
+
+    # Calculate loss map for a model
+    elif action == "error":
+        error_map(args)
