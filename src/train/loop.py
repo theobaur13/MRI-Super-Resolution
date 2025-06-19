@@ -92,7 +92,7 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
                     "val_psnr": ""
                 })
 
-            if count % int(len(train_loader) / 50) == 0:  # Print every 50% of the set
+            if count % int(len(train_loader) / 2) == 0:  # Print every 50% of the set
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
                 tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")

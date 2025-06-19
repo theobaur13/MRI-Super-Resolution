@@ -12,6 +12,7 @@ class CompositeLoss(nn.Module):
             "edge": 0.7,
             "pixel": 0.3,
             "perceptual": 1.0,
+            "fourier": 0.0
         }
         self.l1 = nn.L1Loss()
 
@@ -75,6 +76,9 @@ class CompositeLoss(nn.Module):
 
         if self.weights["edge"] > 0:
             loss += self.weights["edge"] * self.edge_loss(sr, hr)
+
+        if self.weights["fourier"] > 0:
+            loss += self.weights["fourier"] * self.fourier_loss(sr, hr)
 
         return loss
 
