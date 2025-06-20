@@ -7,15 +7,11 @@ from src.utils.conversions import (
     convert_to_kspace,
     convert_to_image,
     jax_to_numpy,
-    numpy_to_jax
 )
 from src.simulation.transformations import (
-    variable_density_undersampling,
-    radial_undersampling,
-    spiral_undersampling,
     cartesian_undersampling,
+    reconstruct_cartesian,
     cylindrical_crop,
-    gaussian_amplification,
     rician_noise,
     matter_noise,
     partial_fourier,
@@ -46,30 +42,21 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = cylindrical_crop(kspace, axis=axis, factor=0.58)
     kspaces["2_cylindrical_crop"] = kspace
 
-    kspace = radial_undersampling(kspace, axis=axis)
-    kspaces["3_radial_undersampling"] = kspace
+    kspace = cartesian_undersampling(kspace, axis=axis)
+    kspaces["3_cartesian_undersampling"] = kspace
 
-    # kspace = spiral_undersampling(kspace, axis=axis)
-    # kspaces["spiral_undersampling"] = kspace
-
-    # kspace = cartesian_undersampling(kspace, axis=axis)
-    # kspaces["cartesian_undersampling"] = kspace
-
-    # kspace = variable_density_undersampling(kspace, density=0.5, steepness=15)
-    # kspaces["variable_density_undersampling"] = kspace
+    kspace = reconstruct_cartesian(kspace, axis=axis)
+    kspaces["4_reconstruct_cartesian"] = kspace
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
-    kspaces["4_partial_fourier"] = kspace
+    kspaces["5_partial_fourier"] = kspace
 
     ### === Image Domain === ###
     image = convert_to_image(kspace)
     images["1_k_space_manipulation"] = image
 
-    # image = gaussian_amplification(image, axis=0, spread=0.5, centre=0.5, amplitude=0.7, invert=True)
-    # images["2_central_brightening"] = image
-
     image = rician_noise(image, base_noise=0.005)
-    images["3_rician_noise"] = image
+    images["2_rician_noise"] = image
 
     images["final"] = image
 
@@ -100,9 +87,9 @@ def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
             titles=list(images.keys()))
         
         # Display the original and simulated k-spaces
-        display_3d(
+        display_img(
             list(kspaces.values()),
-            slice=voxel_slice, axis=axis, limit=1,
+            slice=voxel_slice, axis=axis,
             titles=list(kspaces.keys()))
 
     # Convert the final image to NIfTI format

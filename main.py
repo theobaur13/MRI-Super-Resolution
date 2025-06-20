@@ -17,7 +17,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     # Subparser for simulating data
-    # > py main.py simulate --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t1n.nii.gz" --axis 2 --slice 65
+    # > py main.py simulate --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2f.nii.gz" --axis 2 --slice 65
     simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
     simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
     simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     generate_training_data_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
 
     # Subparser for viewing data
-    # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2w.nii.gz" --slice 65 --axis 2
+    # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
     view_parser = subparsers.add_parser("view", help="View NIfTI data")
     view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
