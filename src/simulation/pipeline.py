@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import nibabel as nib
-from src.display.plot import display_img, display_3d
+from src.display.plot import display_img
 from src.utils.slicing import world_to_voxel_slice
 from src.utils.conversions import (
     convert_to_kspace,
@@ -9,14 +9,13 @@ from src.utils.conversions import (
     jax_to_numpy,
 )
 from src.simulation.transformations import (
+    matter_contrast,
+    cylindrical_crop,
     cartesian_undersampling,
     reconstruct_cartesian,
-    cylindrical_crop,
-    rician_noise,
-    matter_noise,
     partial_fourier,
     hermitian_reconstruct,
-    matter_contrast
+    rician_noise,
 )
 
 def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
@@ -33,6 +32,8 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspaces = {}
     images = {}
 
+    images["1_original"] = image
+
     # image = matter_contrast(image, path)
     # images["matter_contrast"] = image
 
@@ -40,7 +41,7 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = convert_to_kspace(image)
     kspaces["1_original"] = kspace
 
-    kspace = cylindrical_crop(kspace, axis=axis, factor=0.58)
+    kspace = cylindrical_crop(kspace, axis=axis, factor=0.58, edge_smoothing=0.35)
     kspaces["2_cylindrical_crop"] = kspace
 
     kspace = cartesian_undersampling(kspace, axis=axis)
@@ -49,7 +50,7 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = reconstruct_cartesian(kspace, axis=axis)
     kspaces["4_reconstruct_cartesian"] = kspace
 
-    kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
+    kspace = partial_fourier(kspace, axis=axis, fraction=0.65)
     kspaces["5_partial_fourier"] = kspace
 
     kspace = hermitian_reconstruct(kspace, axis=axis)
@@ -57,10 +58,10 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
 
     ### === Image Domain === ###
     image = convert_to_image(kspace)
-    images["1_k_space_manipulation"] = image
+    images["2_k_space_manipulation"] = image
 
     image = rician_noise(image, base_noise=0.005)
-    images["2_rician_noise"] = image
+    images["3_rician_noise"] = image
 
     images["final"] = image
 
