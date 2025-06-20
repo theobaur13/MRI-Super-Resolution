@@ -1,52 +1,4 @@
 import os
-import re
-from datetime import datetime
-from tqdm import tqdm
-
-def get_matching_adni_scan(path):
-    image = os.path.basename(path)
-    adni_dir = os.path.dirname(os.path.dirname(path))
-
-    # Search the 1.5T and 3T directories for the given image_id
-    pattern = re.compile(r'^ADNI_(\d+_S_\d+)_MR_([A-Za-z0-9_]+)_br_raw_(\d+)_([0-9]+)_S[0-9]+_(I\d+)\.nii\.gz$')
-    match = pattern.match(image)
-    
-    if match:
-        # Extract patient ID, description, and timestamp from the filename
-        patient_id = match.group(1)
-        query_description = match.group(2)
-        timestamp_raw = match.group(3)
-        datestamp = datetime.strptime(timestamp_raw, '%Y%m%d%H%M%S%f').date()
-        datestamp = str(datestamp).replace("-", "")
-
-        # Check if the image is in the 1.5T or 3T directory
-        if query_description == "Axial_PD_T2_FSE_":
-            target_strengh = "3T"
-            target_description = "Double_TSE"
-        elif query_description == "Double_TSE":
-            target_strengh = "1.5T"
-            target_description = "Axial_PD_T2_FSE_"
-
-        # If image is in 1.5T, search in 3T and vice versa
-        target_dir = os.path.join(adni_dir, target_strengh)
-
-        # Iterate through the files names in the target directory
-        target = None
-        for file in os.listdir(target_dir):
-            search_pattern = re.compile(rf'ADNI_{patient_id}_MR_{target_description}_br_raw_{datestamp}.*')
-
-            if search_pattern.match(file):
-                target = os.path.join(target_dir, file)
-                break
-
-        # Return the paths of the images with the given image_id in order of 1.5T and 3T
-        if target_strengh == "1.5T":
-            return target, path
-        elif target_strengh == "3T":
-            return path, target
-        else:
-            print(f"No matching image found in {target_strengh} directory for {image}")
-            return None
 
 def get_brats_paths(data_dir, seq=None, dataset=None):
     datasets = [dataset] if dataset else ["BraSyn", "GLI", "GoAT", "LocalInpainting", "MEN-RT", "MET", "PED", "SSA"]
@@ -76,25 +28,6 @@ def get_brats_paths(data_dir, seq=None, dataset=None):
             train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
 
     return train_paths, validate_paths
-
-def get_adni_paths(data_dir):
-    scans_dir = os.path.join(data_dir, "scans")
-    t1_5 = []
-    t3 = []
-    for patient_dir in tqdm(os.listdir(scans_dir)):
-        for scan_dir in os.listdir(os.path.join(scans_dir, patient_dir)):
-            if scan_dir.endswith("Axial_PD_T2_FSE"):
-                visit_dir = os.path.join(scans_dir, patient_dir, scan_dir)
-                for visit in os.listdir(visit_dir):
-                    for image_dir in os.listdir(os.path.join(visit_dir, visit)):
-                        t1_5.append(os.path.join(visit_dir, visit, image_dir))
-
-            elif scan_dir.endswith("Double_TSE"):
-                visit_dir = os.path.join(scans_dir, patient_dir, scan_dir)
-                for visit in os.listdir(visit_dir):
-                    for image_dir in os.listdir(os.path.join(visit_dir, visit)):
-                        t3.append(os.path.join(visit_dir, visit, image_dir))
-    return t1_5, t3
 
 def get_seg_paths(path):
     base_path = os.path.dirname(path)

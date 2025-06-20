@@ -1,4 +1,3 @@
-import torch
 import numpy as np
 import jax.numpy as jnp
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
