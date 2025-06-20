@@ -54,19 +54,21 @@ if __name__ == "__main__":
     training_parser.add_argument("--resume", type=bool, default=False, help="Whether to resume training from a checkpoint")
 
     # Subparser for running a model
-    # py main.py run --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --slice 24
+    # py main.py run --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
     run_parser = subparsers.add_parser("run", help="Run a model on a slice")
     run_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     run_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
-    run_parser.add_argument("--vol_name", type=str, default="validate", help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    run_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    run_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
     run_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
 
     # Subparser for error map
-    # py main.py error --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --slice 24
+    # py main.py error --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
     loss_parser = subparsers.add_parser("error", help="Calculate error map for a model")
     loss_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     loss_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
-    loss_parser.add_argument("--vol_name", type=str, default="validate", help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    loss_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    loss_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to calculate error map on")
     loss_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
 
     args = parser.parse_args()

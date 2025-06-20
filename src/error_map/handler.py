@@ -9,14 +9,15 @@ def error_map(args):
     model_path = args.model_path
     lmdb_path = args.lmdb_path
     vol_name = args.vol_name
+    set_type = args.set
     slice_index = args.slice
     
     # Load the generator model
     generator = Generator().to("cuda")
     generator.load_state_dict(torch.load(model_path, map_location="cuda"))
 
-    hr_key = f"train/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
-    lr_key = f"train/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
+    hr_key = f"{set_type}/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
+    lr_key = f"{set_type}/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
 
     with lmdb.open(lmdb_path, readonly=True, lock=False) as env:
         with env.begin() as txn:
