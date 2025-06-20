@@ -32,7 +32,7 @@ def cartesian_undersampling(kspace, axis, gap=2, spine_width=48):
     return kspace * final_mask
 
 # This function simulates a GRAPPA reconstruction. Since GRAPPA requires multiple coils we need to use an interpolation method.
-def reconstruct_cartesian(kspace, axis, spine_width=48, kernel_size=5):
+def reconstruct_cartesian(kspace, axis, spine_width=48, kernel_size=5, multiplier=2):
     shape = kspace.shape
     target_axis = (axis + 1) % 3
     N = shape[target_axis]
@@ -72,7 +72,7 @@ def reconstruct_cartesian(kspace, axis, spine_width=48, kernel_size=5):
         window = lax.dynamic_slice(ks, (start, 0, 0), (kernel_size, ks.shape[1], ks.shape[2]))
         window = window.reshape(kernel_size, -1).T
         prediction = window @ w
-        prediction = prediction.reshape(ks.shape[1:])
+        prediction = prediction.reshape(ks.shape[1:]) * multiplier      # Multiply by multiplier if effect is too soft
         is_zero_line = jnp.all(ks[i] == 0)
         return jnp.where(is_zero_line, prediction, ks[i])
 
@@ -282,7 +282,7 @@ def rayleigh_noise(image, base_noise, key=42):
     return image + noise
 
 def partial_fourier(kspace, axis, fraction=0.625):
-    target_axis = (axis + 1) % 3
+    target_axis = (axis + 2) % 3
     shape = kspace.shape
     N = shape[target_axis]
     
@@ -300,6 +300,20 @@ def partial_fourier(kspace, axis, fraction=0.625):
 
     # Broadcast to kspace shape and apply mask
     return kspace * mask
+
+# This function reconstructs the truncated k-space (from partial_fourier) using Hermitian symmetry.
+def hermitian_reconstruct(kspace, axis):
+    target_axis = (axis + 2) % 3
+
+    # Flip and conjugate along the target axis
+    kspace_conj = jnp.conj(jnp.flip(kspace, axis=target_axis))
+
+    # Create keep mask based on non-zero values in truncated k-space
+    keep_mask = jnp.abs(kspace) > 0
+
+    # Fill in missing values with Hermitian conjugates
+    reconstructed = jnp.where(keep_mask, kspace, kspace_conj)
+    return reconstructed
 
 # Adjust the contrast of the image in accordance to GM, WM, CSF.
 def matter_contrast(image, path, intensity=0.5):

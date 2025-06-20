@@ -15,6 +15,7 @@ from src.simulation.transformations import (
     rician_noise,
     matter_noise,
     partial_fourier,
+    hermitian_reconstruct,
     matter_contrast
 )
 
@@ -50,6 +51,9 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
 
     kspace = partial_fourier(kspace, axis=axis, fraction=0.625)
     kspaces["5_partial_fourier"] = kspace
+
+    kspace = hermitian_reconstruct(kspace, axis=axis)
+    kspaces["6_hermitian_reconstruct"] = kspace
 
     ### === Image Domain === ###
     image = convert_to_image(kspace)
