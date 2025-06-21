@@ -1,5 +1,6 @@
 import lmdb
 import pickle
+import gzip
 import numpy as np
 import torchvision.transforms as transforms
 from PIL import Image
@@ -52,8 +53,8 @@ class LMDBDataset(Dataset):
 
         with lmdb.open(self.lmdb_path, readonly=True, lock=False) as env:
             with env.begin() as txn:
-                lr_slice = pickle.loads(txn.get(lr_key.encode("utf-8")))
-                hr_slice = pickle.loads(txn.get(hr_key.encode("utf-8")))
+                lr_slice = pickle.loads(gzip.decompress(txn.get(lr_key.encode("utf-8"))))
+                hr_slice = pickle.loads(gzip.decompress(txn.get(hr_key.encode("utf-8"))))
 
         # Normalize
         lr_slice = self.normalize_slice(lr_slice)
