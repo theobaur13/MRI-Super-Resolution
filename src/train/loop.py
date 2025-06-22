@@ -1,4 +1,5 @@
 import os
+import csv
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -9,15 +10,17 @@ from src.utils.readwrite import log_to_csv
 from src.display.plot import plot_training_log
 from src.train.loss import CompositeLoss, gradient_penalty
 
-def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=False):
+def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_dir, resume=False):
     # Initialize models
-    generator = Generator().to("cuda")
+    generator = Generator(rrdb_count=rrdb_count).to("cuda")
     discriminator = Discriminator().to("cuda")
 
     # Initialize logging and resume settings
     resume_pretrain_epoch = 0
     resume_epoch = 0
-    log_file = os.path.join(output_dir, "history.csv")
+    training_loss_file = os.path.join(output_dir, "training_loss.csv")
+    ssim_file = os.path.join(output_dir, "ssim.csv")
+    psnr_file = os.path.join(output_dir, "psnr.csv")
 
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
@@ -26,9 +29,12 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
 
     if resume:
         resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
+        resume_log(training_loss_file, resume_epoch)
+        resume_log(ssim_file, resume_epoch)
+        resume_log(psnr_file, resume_epoch)
 
     ### --- Pretraining the Generator --- ###
-    for epoch in tqdm(range(resume_pretrain_epoch, pretrain_epochs)):
+    for epoch in tqdm(range(resume_pretrain_epoch + 1, pretrain_epochs)):
         for lr, hr in tqdm(train_loader):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
@@ -38,8 +44,8 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
             loss.backward()
             gen_optimizer.step()
 
-        torch.save(generator.state_dict(), f"{output_dir}/pretrain_epoch_{epoch+1}.pth")
-        tqdm.write(f"Pretrain Epoch [{epoch+1}/{pretrain_epochs}], Loss: {loss.item():.4f}")
+        torch.save(generator.state_dict(), f"{output_dir}/pretrain_epoch_{epoch}.pth")
+        tqdm.write(f"Pretrain Epoch [{epoch}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
     ### --- Adversarial Training --- ###
     best_ssim, best_psnr = 0.0, 0.0
@@ -78,24 +84,20 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
 
             count += 1
             if count % int(len(train_loader) / 10) == 0:  # Print every 10% of the set
-                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
-                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
+                tqdm.write(f"Epoch [{epoch}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
+                tqdm.write(f"Epoch [{epoch}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
 
-                log_to_csv(log_file, {
-                    "epoch": epoch + 1,
+                log_to_csv(training_loss_file, {
+                    "epoch": epoch,
                     "batch": count,
                     "gen_loss": gen_loss.item(),
                     "disc_loss": disc_loss.item(),
-                    "train_ssim": "",
-                    "train_psnr": "",
-                    "val_ssim": "",
-                    "val_psnr": ""
                 })
 
             if count % int(len(train_loader) / 2) == 0:  # Print every 50% of the set
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
-                tqdm.write(f"Epoch [{epoch+1}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")
+                tqdm.write(f"Epoch [{epoch}/{epochs}], Training SSIM: {ssim_avg:.4f}, Training PSNR: {psnr_avg:.4f}")
 
                 # Validation Metrics
                 with torch.no_grad():
@@ -110,7 +112,7 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
 
                     val_ssim_avg = val_ssim_total / len(val_loader)
                     val_psnr_avg = val_psnr_total / len(val_loader)
-                    tqdm.write(f"Epoch [{epoch+1}/{epochs}], Validation SSIM: {val_ssim_avg:.4f}, Validation PSNR: {val_psnr_avg:.4f}")
+                    tqdm.write(f"Epoch [{epoch}/{epochs}], Validation SSIM: {val_ssim_avg:.4f}, Validation PSNR: {val_psnr_avg:.4f}")
 
                     if val_ssim_avg > best_ssim:
                         best_ssim = val_ssim_avg
@@ -125,23 +127,28 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, output_dir, resume=F
                         tqdm.write(f"New best PSNR: {best_psnr:.4f}, model saved.")
 
                 # Log metrics
-                log_to_csv(log_file, {
-                    "epoch": epoch + 1,
+                log_to_csv(ssim_file, {
+                    "epoch": epoch,
                     "batch": count,
-                    "gen_loss": gen_loss.item(),
-                    "disc_loss": disc_loss.item(),
                     "train_ssim": ssim_avg,
+                    "val_ssim": val_ssim_avg
+                })
+
+                log_to_csv(psnr_file, {
+                    "epoch": epoch,
+                    "batch": count,
                     "train_psnr": psnr_avg,
-                    "val_ssim": val_ssim_avg,
                     "val_psnr": val_psnr_avg
                 })
 
                 # Plot training log
-                # plot_training_log(log_file, output_dir=output_dir)
+                plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
+                plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
+                plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
 
                 # Save generator state
-                torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch+1}.pth")
-                torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch+1}.pth")
+                torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch}.pth")
+                torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch}.pth")
     
     # Save the model
     torch.save(generator.state_dict(), f"{output_dir}/generator.pth")
@@ -190,3 +197,17 @@ def resume_models(generator, discriminator, output_dir, pretrain_epochs):
         tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
 
     return resume_pretrain_epoch, resume_epoch
+
+# Erase lines from epochs that are about to be rewritten
+def resume_log(csv_file, resume_epoch):
+    # Read all existing rows
+    with open(csv_file, mode='r') as f:
+        reader = csv.DictReader(f)
+        rows = [row for row in reader if int(row['epoch']) < resume_epoch]
+        fieldnames = reader.fieldnames
+
+    # Rewrite the file with filtered rows
+    with open(csv_file, mode='w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)

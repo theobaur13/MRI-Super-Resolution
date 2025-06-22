@@ -18,6 +18,7 @@ def train(args):
     NUM_WORKERS = 4
     USEFUL_RANGE = (50, 100)
     LIMIT = 1000
+    RRDB_COUNT = 1
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path,split="train", limit=LIMIT, useful_range=USEFUL_RANGE)
     val_data = LMDBDataset(lmdb_path=args.lmdb_path, split="validate", limit=LIMIT * 0.33, useful_range=USEFUL_RANGE)
@@ -27,4 +28,4 @@ def train(args):
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS)
 
-    loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, output_dir=output_dir, resume=args.resume)
+    loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, rrdb_count=RRDB_COUNT, output_dir=output_dir, resume=args.resume)

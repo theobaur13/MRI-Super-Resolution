@@ -22,14 +22,17 @@ class ResidualDenseBlock(nn.Module):
         return x + x5 * 0.2
     
 class RRDB(nn.Module):
-    def __init__(self, in_channels, growth_channels, rrdb_count=3):
+    def __init__(self, in_channels, growth_channels):
         super(RRDB, self).__init__()
-        self.blocks = nn.Sequential(*[
-            ResidualDenseBlock(in_channels, growth_channels) for _ in range(rrdb_count)
-        ])
+        self.rdb1 = ResidualDenseBlock(in_channels, growth_channels)
+        self.rdb2 = ResidualDenseBlock(in_channels, growth_channels)
+        self.rdb3 = ResidualDenseBlock(in_channels, growth_channels)
 
     def forward(self, x):
-        return x + self.blocks(x) * 0.2
+        out = self.rdb1(x)
+        out = self.rdb2(out)
+        out = self.rdb3(out)
+        return x + out * 0.2
 
 class Generator(nn.Module):
     def __init__(
@@ -37,7 +40,7 @@ class Generator(nn.Module):
             in_channels = 1,
             channels = 64,
             growth_channels = 32,
-            rrdb_count = 3,
+            rrdb_count = 1,
         ):
         super(Generator, self).__init__()
         
