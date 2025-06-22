@@ -32,9 +32,14 @@ class LMDBDataset(Dataset):
         self._gather_slices()
 
     def _gather_slices(self):
+        prefix = f"{self.split}/".encode("utf-8")
         with lmdb.open(self.lmdb_path, readonly=True, lock=False) as env:
             with env.begin() as txn:
                 cursor = txn.cursor()
+
+                if not cursor.set_range(prefix):
+                    return
+                
                 count = 0
                 for key, _ in tqdm(cursor):
                     key_str = key.decode("utf-8")
