@@ -1,6 +1,7 @@
 import torch
 import lmdb
 import pickle
+import gzip
 from src.train.models.ESRGAN import Generator
 import matplotlib.pyplot as plt
 
@@ -21,8 +22,8 @@ def error_map(args):
 
     with lmdb.open(lmdb_path, readonly=True, lock=False) as env:
         with env.begin() as txn:
-            hr_slice = pickle.loads(txn.get(hr_key))
-            lr_slice = pickle.loads(txn.get(lr_key))
+            hr_slice = pickle.loads(gzip.decompress(txn.get(hr_key)))
+            lr_slice = pickle.loads(gzip.decompress(txn.get(lr_key)))
 
     # Convert LR slice to tensor and run through the generator
     lr_tensor = torch.tensor(lr_slice).unsqueeze(0).unsqueeze(0).to("cuda")
