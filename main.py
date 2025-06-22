@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # > py main.py simulate --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2f.nii.gz" --axis 2 --slice 65
     simulate_parser = subparsers.add_parser("simulate", help="Simulate data")
     simulate_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to simulate")
-    simulate_parser.add_argument("--axis", type=int, default=0, help="Axis for simulation")
+    simulate_parser.add_argument("--axis", type=int, default=2, help="Axis for simulation")
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
     # Subparser for generating training data
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     generate_training_data_parser = subparsers.add_parser("generate-training-data", help="Generate simulated training data for BraTS")
     generate_training_data_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
     generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
-    generate_training_data_parser.add_argument("--axis", type=int, required=True, help="Axis for simulation")
+    generate_training_data_parser.add_argument("--axis", type=int, default=2, help="Axis for simulation")
     generate_training_data_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
     generate_training_data_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     view_parser = subparsers.add_parser("view", help="View NIfTI data")
     view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
-    view_parser.add_argument("--axis", type=int, default=0, help="Axis for viewing")
+    view_parser.add_argument("--axis", type=int, default=2, help="Axis for viewing")
     
     # Subparser for segmenting data
     # py main.py segment --dataset_dir "E:\data-brats-2024" --limit 1
@@ -50,7 +50,6 @@ if __name__ == "__main__":
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
     training_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
     training_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for model and logs")
-    training_parser.add_argument("--axis", type=int, default=2, help="Axis for training data")
     training_parser.add_argument("--resume", type=bool, default=False, help="Whether to resume training from a checkpoint")
 
     # Subparser for running a model

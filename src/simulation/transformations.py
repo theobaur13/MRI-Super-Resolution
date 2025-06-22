@@ -6,7 +6,7 @@ from src.utils.paths import get_seg_paths
 from src.utils.readwrite import read_nifti
 
 # This function performs undersampling in k-space by keeping every x-th line along the specified axis.
-def cartesian_undersampling(kspace, axis, gap=2, spine_width=64):
+def cartesian_undersampling(kspace, axis, gap=4, spine_width=64):
     shape = kspace.shape
     target_axis = (axis + 1) % 3
     N = shape[target_axis]
@@ -32,7 +32,7 @@ def cartesian_undersampling(kspace, axis, gap=2, spine_width=64):
     return kspace * final_mask
 
 # This function simulates a GRAPPA reconstruction. Since GRAPPA requires multiple coils we need to use an interpolation method.
-def reconstruct_cartesian(kspace, axis, spine_width=64, kernel_size=5, multiplier=1.0):
+def reconstruct_cartesian(kspace, axis, spine_width=64, kernel_size=3, multiplier=1000.0):
     shape = kspace.shape
     target_axis = (axis + 1) % 3
     N = shape[target_axis]

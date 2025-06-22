@@ -1,12 +1,12 @@
 import os
 
 def get_brats_paths(data_dir, seq=None, dataset=None):
-    datasets = [dataset] if dataset else ["BraSyn", "GLI", "GoAT", "LocalInpainting", "MEN-RT", "MET", "PED", "SSA"]
+    datasets = [dataset] if dataset else ["BraSyn", "GLI", "GoAT", "MET", "SSA"]
     train_paths, validate_paths = [], []
 
     for dataset in datasets:
         sequences = [seq] if seq else ["t1c", "t1n", "t2f", "t2w"]
-        if dataset in ["BraSyn", "GLI", "MET", "PED"]:
+        if dataset in ["BraSyn", "GLI", "MET"]:
             for split, paths in [("train", train_paths), ("validate", validate_paths)]:
                 dir_path = os.path.join(data_dir, dataset, split)
                 paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
@@ -14,15 +14,6 @@ def get_brats_paths(data_dir, seq=None, dataset=None):
             for split, paths in [("train-WithOutGroundTruth", train_paths), ("validate", validate_paths)]:
                 dir_path = os.path.join(data_dir, dataset, split)
                 paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
-        elif dataset == "LocalInpainting":
-            seq = "t1n"
-            dir_path = os.path.join(data_dir, dataset, "train")
-            train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
-        elif dataset == "MEN-RT":
-            seq = "t1c"
-            for split, paths in [("train", train_paths), ("validate", validate_paths)]:
-                dir_path = os.path.join(data_dir, dataset, split)
-                paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path)]
         elif dataset == "SSA":
             dir_path = os.path.join(data_dir, dataset, "train")
             train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]

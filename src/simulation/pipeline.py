@@ -41,7 +41,7 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = convert_to_kspace(image)
     kspaces["1_original"] = kspace
 
-    kspace = cylindrical_crop(kspace, axis=axis, factor=0.58, edge_smoothing=0.35)
+    kspace = cylindrical_crop(kspace, axis=axis, factor=0.65, edge_smoothing=0.40)
     kspaces["2_cylindrical_crop"] = kspace
 
     kspace = cartesian_undersampling(kspace, axis=axis)
@@ -50,7 +50,7 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = reconstruct_cartesian(kspace, axis=axis)
     kspaces["4_reconstruct_cartesian"] = kspace
 
-    kspace = partial_fourier(kspace, axis=axis, fraction=0.65)
+    kspace = partial_fourier(kspace, axis=axis, fraction=0.7)
     kspaces["5_partial_fourier"] = kspace
 
     kspace = hermitian_reconstruct(kspace, axis=axis)
