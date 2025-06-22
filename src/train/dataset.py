@@ -10,13 +10,13 @@ import torchvision.transforms.functional as TF
 import random
 
 class LMDBDataset(Dataset):
-    def __init__(self, lmdb_path, axis=2, split="train", limit=10000):
+    def __init__(self, lmdb_path, split, limit, useful_range):
         self.lmdb_path = lmdb_path
-        self.axis = axis
         self.split = split
         self.limit = limit
-        self.do_augment = split == "train"
+        self.useful_range = useful_range
 
+        self.do_augment = split == "train"
         self.pairs = []                 # (HR_path, LR_path, slice_index)
 
         self.hr_transform = transforms.Compose([
@@ -39,6 +39,16 @@ class LMDBDataset(Dataset):
                 for key, _ in tqdm(cursor):
                     key_str = key.decode("utf-8")
                     if key_str.startswith(f"{self.split}/") and "/HR/" in key_str:
+                        # Get the slice index
+                        try:
+                            slice_idx = int(key_str.rsplit("/", 1)[-1])
+                        except ValueError:
+                            continue
+
+                        # Filter by useful_range
+                        if not (self.useful_range[0] <= slice_idx < self.useful_range[1]):
+                            continue
+                        
                         lr_key = key_str.replace("/HR/", "/LR/")
                         self.pairs.append((lr_key, key_str))
                         count += 1

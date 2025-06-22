@@ -16,10 +16,11 @@ def train(args):
     EPOCHS = 25
     PRETRAIN_EPOCHS = 4
     NUM_WORKERS = 4
-    LIMIT = 20000
+    USEFUL_RANGE = (50, 100)
+    LIMIT = 1000
 
-    train_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis,split="train", limit=LIMIT)
-    val_data = LMDBDataset(lmdb_path=args.lmdb_path, axis=args.axis, split="validate", limit=LIMIT * 0.33)
+    train_data = LMDBDataset(lmdb_path=args.lmdb_path,split="train", limit=LIMIT, useful_range=USEFUL_RANGE)
+    val_data = LMDBDataset(lmdb_path=args.lmdb_path, split="validate", limit=LIMIT * 0.33, useful_range=USEFUL_RANGE)
     print(f"Total slices in training dataset: {len(train_data)}")
     print(f"Total slices in validation dataset: {len(val_data)}")
 
