@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import nibabel as nib
-from src.display.plot import display_img
+from src.utils.plot import display_img
 from src.utils.slicing import world_to_voxel_slice
 from src.utils.conversions import (
     convert_to_kspace,

@@ -7,7 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from src.train.models.ESRGAN import Generator, Discriminator
 from src.utils.readwrite import log_to_csv
-from src.display.plot import plot_training_log
+from src.utils.plot import plot_training_log
 from src.train.loss import CompositeLoss, gradient_penalty
 
 def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_dir, resume=False):
