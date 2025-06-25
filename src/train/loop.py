@@ -21,6 +21,7 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
     training_loss_file = os.path.join(output_dir, "training_loss.csv")
     ssim_file = os.path.join(output_dir, "ssim.csv")
     psnr_file = os.path.join(output_dir, "psnr.csv")
+    individual_losses_file = os.path.join(output_dir, "individual_losses.csv")
 
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
@@ -29,12 +30,13 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
 
     if resume:
         resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
-        resume_log(training_loss_file, resume_epoch)
-        resume_log(ssim_file, resume_epoch)
-        resume_log(psnr_file, resume_epoch)
+        if resume_pretrain_epoch == pretrain_epochs:
+            resume_log(training_loss_file, resume_epoch)
+            resume_log(ssim_file, resume_epoch)
+            resume_log(psnr_file, resume_epoch)
 
     ### --- Pretraining the Generator --- ###
-    for epoch in tqdm(range(resume_pretrain_epoch + 1, pretrain_epochs)):
+    for epoch in tqdm(range(resume_pretrain_epoch + 1, pretrain_epochs + 1)):
         for lr, hr in tqdm(train_loader):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
@@ -50,7 +52,7 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
     ### --- Adversarial Training --- ###
     best_ssim, best_psnr = 0.0, 0.0
 
-    for epoch in tqdm(range(resume_epoch, epochs)):
+    for epoch in tqdm(range(resume_epoch + 1, epochs)):
         count = 0
         for lr, hr in tqdm(train_loader):
             lr, hr = lr.to("cuda"), hr.to("cuda")
@@ -75,7 +77,7 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
 
             gen_adv_loss = -fake_pred.mean()
 
-            gen_content_loss = content_loss(sr, hr)
+            gen_content_loss, losses = content_loss(sr, hr, logging=True)
             gen_loss = gen_content_loss + 0.001 * gen_adv_loss
             
             gen_optimizer.zero_grad()
@@ -83,16 +85,24 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
             gen_optimizer.step()
 
             count += 1
-            if count % int(len(train_loader) / 10) == 0:  # Print every 10% of the set
-                tqdm.write(f"Epoch [{epoch}/{epochs}], Discriminator Loss: {disc_loss.item():.4f}")
-                tqdm.write(f"Epoch [{epoch}/{epochs}], Generator Loss: {gen_loss.item():.4f}")
-
+            if count % int(len(train_loader) / 50) == 0:  # Print every 10% of the set
                 log_to_csv(training_loss_file, {
                     "epoch": epoch,
                     "batch": count,
                     "gen_loss": gen_loss.item(),
                     "disc_loss": disc_loss.item(),
                 })
+
+                individual_loss_data = {
+                    "epoch": epoch,
+                    "batch": count,
+                }
+
+                for key in ["pixel", "perceptual", "edge", "fourier", "style"]:
+                    if key in losses:
+                        individual_loss_data[f"{key}_loss"] = losses[key].item()
+
+                log_to_csv(individual_losses_file, individual_loss_data)
 
             if count % int(len(train_loader) / 2) == 0:  # Print every 50% of the set
                 # Training Metrics
@@ -142,9 +152,10 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
                 })
 
                 # Plot training log
-                plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
-                plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
-                plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
+                # plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
+                # plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
+                # plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
+                # plot_training_log(individual_losses_file, output_file=os.path.join(output_dir, "individual_losses_plot.png"))
 
                 # Save generator state
                 torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch}.pth")
