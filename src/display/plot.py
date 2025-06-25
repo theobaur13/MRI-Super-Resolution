@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
 import pandas as pd
-import os
 from src.utils.conversions import jax_to_numpy
 from src.utils.slicing import slice_nifti
 
@@ -74,10 +73,10 @@ def plot_training_log(csv_file, output_file):
     if not {"epoch", "batch"}.issubset(df.columns):
         raise ValueError("CSV file must contain 'epoch' and 'batch' columns.")
 
-    # Get metric columns (assumes exactly 2 metrics per row)
+    # Get all metric columns (everything except 'epoch' and 'batch')
     metric_cols = [col for col in df.columns if col not in {"epoch", "batch"}]
-    if len(metric_cols) != 2:
-        raise ValueError(f"CSV file must contain exactly 2 metric columns. Found: {metric_cols}")
+    if len(metric_cols) == 0:
+        raise ValueError("CSV file must contain at least one metric column.")
 
     # Sort by epoch and batch
     df = df.sort_values(by=["epoch", "batch"]).reset_index(drop=True)
