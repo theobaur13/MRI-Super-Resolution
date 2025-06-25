@@ -5,7 +5,7 @@ from src.simulation.handler import simulate
 from src.train.handler import train
 from src.segment.handler import segment
 from src.generate_training_data.handler import generate_training_data
-from src.run.handler import run_model
+from src.predict.handler import predict
 from src.error_map.handler import error_map
 
 if __name__ == "__main__":
@@ -52,25 +52,32 @@ if __name__ == "__main__":
     training_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for model and logs")
     training_parser.add_argument("--resume", type=bool, default=False, help="Whether to resume training from a checkpoint")
 
-    # Subparser for running a model
-    # py main.py run --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
-    run_parser = subparsers.add_parser("run", help="Run a model on a slice")
-    run_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
-    run_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
-    run_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
-    run_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
-    run_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
-    run_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
+    # Subparser for running a model on a slice
+    # py main.py predict --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
+    predict_parser = subparsers.add_parser("predict", help="Run a model on a slice")
+    predict_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    predict_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    predict_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    predict_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
+    predict_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
+    predict_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
-    # Subparser for error map
-    # py main.py error --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
-    loss_parser = subparsers.add_parser("error", help="Calculate error map for a model")
-    loss_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
-    loss_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
-    loss_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
-    loss_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to calculate error map on")
-    loss_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
-    loss_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
+    # Subparser for error map on a slice
+    # py main.py error-map --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
+    error_map_parser = subparsers.add_parser("error-map", help="Calculate error map for a model")
+    error_map_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    error_map_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    error_map_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
+    error_map_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to calculate error map on")
+    error_map_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
+    error_map_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
+
+    # Subparser for running model on dataset and exporting results
+    # py main.py export-predictions --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --output_dir "E:\predictions"
+    export_predictions_parser = subparsers.add_parser("export-predictions", help="Run model on dataset and export results")
+    export_predictions_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    export_predictions_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    export_predictions_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for predictions")
 
     args = parser.parse_args()
     action = args.action.lower()
@@ -96,9 +103,9 @@ if __name__ == "__main__":
         train(args)
 
     # Run a model on a slice
-    elif action == "run":
-        run_model(args)
+    elif action == "predict":
+        predict(args)
 
     # Calculate loss map for a model
-    elif action == "error":
+    elif action == "error-map":
         error_map(args)

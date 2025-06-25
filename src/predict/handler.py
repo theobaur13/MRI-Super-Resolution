@@ -5,7 +5,7 @@ import gzip
 from src.train.models.ESRGAN import Generator
 import matplotlib.pyplot as plt
 
-def run_model(args):
+def predict(args):
     model_path = args.model_path
     lmdb_path = args.lmdb_path
     vol_name = args.vol_name

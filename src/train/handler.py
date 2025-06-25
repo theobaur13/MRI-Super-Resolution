@@ -12,13 +12,13 @@ def train(args):
         os.makedirs(output_dir)
 
     # Constants
-    BATCH_SIZE = 8
+    BATCH_SIZE = 4
     EPOCHS = 25
     PRETRAIN_EPOCHS = 4
     NUM_WORKERS = 4
     USEFUL_RANGE = (50, 100)
-    LIMIT = 1000
-    RRDB_COUNT = 1
+    LIMIT = 20000
+    RRDB_COUNT = 3
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path,split="train", limit=LIMIT, useful_range=USEFUL_RANGE)
     val_data = LMDBDataset(lmdb_path=args.lmdb_path, split="validate", limit=LIMIT * 0.33, useful_range=USEFUL_RANGE)
