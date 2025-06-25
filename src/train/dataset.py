@@ -83,6 +83,10 @@ class LMDBDataset(Dataset):
         lr_tensor = self.lr_transform(lr_img)
         hr_tensor = self.hr_transform(hr_img)
 
+        # Close the images to free memory
+        lr_img.close()
+        hr_img.close()
+
         # Augmentation
         if self.do_augment:
             lr_tensor, hr_tensor = self.augment_pair(lr_tensor, hr_tensor)
