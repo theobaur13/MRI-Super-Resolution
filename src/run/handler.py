@@ -11,8 +11,10 @@ def run_model(args):
     vol_name = args.vol_name
     set_type = args.set
     slice_index = args.slice
+    rrdb_count = args.rrdb_count
 
-    generator = Generator().to("cuda")
+    generator = Generator(rrdb_count=rrdb_count).to("cuda")
+    print(f"Loading model from {model_path}...")
     generator.load_state_dict(torch.load(model_path, map_location="cuda"))
 
     hr_key = f"{set_type}/{vol_name}/HR/{slice_index:03d}".encode("utf-8")

@@ -60,6 +60,7 @@ if __name__ == "__main__":
     run_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
     run_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
     run_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
+    run_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
     # Subparser for error map
     # py main.py error --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
@@ -69,6 +70,7 @@ if __name__ == "__main__":
     loss_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
     loss_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to calculate error map on")
     loss_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
+    loss_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
     args = parser.parse_args()
     action = args.action.lower()
