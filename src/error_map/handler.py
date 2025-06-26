@@ -19,7 +19,7 @@ def error_map(args):
 
     plt.figure(figsize=(6, 6))
     plt.subplot(1, 1, 1)
-    plt.imshow(mae, cmap='hot', vmin=0, vmax=map.max())
+    plt.imshow(mae, cmap='plasma', vmin=0, vmax=mae.max())
     plt.title('Map')
     plt.colorbar(label='Error')
 

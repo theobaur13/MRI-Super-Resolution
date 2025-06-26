@@ -13,7 +13,7 @@ def train(args):
 
     # Constants
     BATCH_SIZE = 4
-    EPOCHS = 25
+    EPOCHS = 20
     PRETRAIN_EPOCHS = 4
     NUM_WORKERS = 4
     USEFUL_RANGE = (50, 100)
