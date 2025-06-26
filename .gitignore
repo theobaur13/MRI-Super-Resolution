@@ -11,3 +11,4 @@ flywheel/v0/output/*
 !flywheel/v0/input/nifti/.gitkeep
 !flywheel/v0/output/.gitkeep
 run.ps1
+.env

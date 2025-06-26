@@ -1,5 +1,6 @@
 import os
 import argparse
+from dotenv import load_dotenv
 from src.display.handler import view
 from src.simulation.handler import simulate
 from src.train.handler import train
@@ -10,6 +11,11 @@ from src.error_map.handler import error_map
 from src.export_predictions.handler import export_predictions
 
 if __name__ == "__main__":
+    # Load environment variables from .env file
+    load_dotenv()
+    LMDB_PATH = os.getenv("LMDB_PATH")
+    BRATS_DIR= os.getenv("BRATS_DIR")
+
     # Set up directories
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,9 +31,9 @@ if __name__ == "__main__":
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
     # Subparser for generating training data
-    # > py main.py generate-training-data --brats_dir "E:\data-brats-2024" --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100 --seq "t2f"
+    # > py main.py generate-training-data --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100 --seq "t2f"
     generate_training_data_parser = subparsers.add_parser("generate-training-data", help="Generate simulated training data for BraTS")
-    generate_training_data_parser.add_argument("--brats_dir", type=str, required=True, help="Path to BraTS directory")
+    generate_training_data_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
     generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")
     generate_training_data_parser.add_argument("--axis", type=int, default=2, help="Axis for simulation")
     generate_training_data_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
@@ -41,43 +47,43 @@ if __name__ == "__main__":
     view_parser.add_argument("--axis", type=int, default=2, help="Axis for viewing")
     
     # Subparser for segmenting data
-    # py main.py segment --dataset_dir "E:\data-brats-2024" --limit 1
+    # py main.py segment --limit 1
     segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
-    segment_parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory")
+    segment_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
     segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
-    # py main.py train --dataset_dir "E:\data-brats-2024_simulated\train" --output_dir "E:\models" --axis 2
+    # py main.py train --output_dir "E:\models" --resume True
     training_parser = subparsers.add_parser("train", help="Train a model on the dataset")
-    training_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    training_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     training_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for model and logs")
     training_parser.add_argument("--resume", type=bool, default=False, help="Whether to resume training from a checkpoint")
 
     # Subparser for running a model on a slice
-    # py main.py predict --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
+    # py main.py predict --model_path "E:\models\best_generator.pth" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
     predict_parser = subparsers.add_parser("predict", help="Run a model on a slice")
     predict_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
-    predict_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    predict_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     predict_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
     predict_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
     predict_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
     predict_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
     # Subparser for error map on a slice
-    # py main.py error-map --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
+    # py main.py error-map --model_path "E:\models\best_generator.pth" --vol_name "BraTS-GLI-00000-000-t2f" --set "train" --slice 24
     error_map_parser = subparsers.add_parser("error-map", help="Calculate error map for a model")
     error_map_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
-    error_map_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    error_map_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     error_map_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
     error_map_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to calculate error map on")
     error_map_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
     error_map_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
     # Subparser for running model on dataset and exporting results
-    # py main.py export-predictions --model_path "E:\models\best_generator.pth" --lmdb_path "E:\data" --output_dir "E:\predictions"
+    # py main.py export-predictions --model_path "E:\models\best_generator.pth" --output_dir "E:\predictions"
     export_predictions_parser = subparsers.add_parser("export-predictions", help="Run model on dataset and export results")
     export_predictions_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
-    export_predictions_parser.add_argument("--lmdb_path", type=str, required=True, help="Path to LMDB dataset")
+    export_predictions_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     export_predictions_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for predictions")
     export_predictions_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
