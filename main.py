@@ -1,14 +1,14 @@
 import os
 import argparse
 from dotenv import load_dotenv
-from src.display.handler import view
+from src.view import view
 from src.simulation.handler import simulate
 from src.train.handler import train
-from src.segment.handler import segment
-from src.generate_training_data.handler import generate_training_data
-from src.predict.handler import predict
-from src.error_map.handler import error_map
-from src.export_predictions.handler import export_predictions
+from src.segment import segment
+from src.generate_training_data import generate_training_data
+from src.predict import predict
+from src.error_map import error_map
+from src.export_predictions import export_predictions
 
 if __name__ == "__main__":
     # Load environment variables from .env file
