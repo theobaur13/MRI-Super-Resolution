@@ -9,22 +9,22 @@ from src.train.loss import CompositeLoss
 from src.train.dataset import LMDBDataset
 from torch.utils.data import DataLoader
 
-# Log raw loss magnitudes during initial forward pass
+# Log raw loss magnitudes during initial forward pass to calibrate loss weights
 def main():
-    lmdb_path = os.path.join(os.path.dirname(__file__), "..", "data")
+    LMDB_PATH = os.getenv("LMDB_PATH")
 
     generator = Generator().to("cuda")
     loss_fn = CompositeLoss(weights={"edge": 0.7, "pixel": 0.3, "perceptual": 1.0, "fourier": 0.00001, "style": 1.0}).to("cuda")
 
-    train_data = LMDBDataset(lmdb_path=lmdb_path, split="train", limit=1000, useful_range=(30, 150))
+    train_data = LMDBDataset(lmdb_path=LMDB_PATH, split="train", limit=1000, useful_range=(30, 150))
     train_loader = DataLoader(train_data, batch_size=1, shuffle=False, pin_memory=True, num_workers=4)
 
     loss_log = {
-    "pixel": [],
-    "perceptual": [],
-    "edge": [],
-    "fourier": [],
-    "style": []
+        "pixel": [],
+        "perceptual": [],
+        "edge": [],
+        "fourier": [],
+        "style": []
     }
 
     for lr, hr in tqdm(train_loader):
