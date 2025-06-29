@@ -17,14 +17,15 @@ class CompositeLoss(nn.Module):
         self.l1 = nn.L1Loss()
 
         # Perceptual loss setup (VGG19 features)
-        self.perceptual_vgg = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:36].eval().to("cuda")
-        for param in self.perceptual_vgg.parameters():
-            param.requires_grad = False
+        if self.weights["perceptual"] > 0 or self.weights["style"] > 0:
+            self.perceptual_vgg = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:36].eval().to("cuda")
+            for param in self.perceptual_vgg.parameters():
+                param.requires_grad = False
 
-        self.vgg_normalize = transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-        )
+            self.vgg_normalize = transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225],
+            )
 
     def perceptual_loss(self, sr, hr):
         if sr.shape[1] == 1:
