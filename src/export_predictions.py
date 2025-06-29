@@ -48,6 +48,10 @@ def export_predictions(args):
             os.makedirs(vol_output_dir, exist_ok=True)
 
             for slice_index in tqdm(slice_indices, desc=f"Slices ({vol_name})", leave=False):
+                save_path = os.path.join(vol_output_dir, f"{slice_index:03d}.png")
+                if os.path.exists(save_path):
+                    continue  
+                
                 try:
                     sr_slice, hr_slice, lr_slice = run_model_on_slice(
                         model_path=model_path,
