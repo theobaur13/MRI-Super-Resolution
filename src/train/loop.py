@@ -1,16 +1,15 @@
 import os
-import csv
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from skimage.metrics import structural_similarity as ssim
-from skimage.metrics import peak_signal_noise_ratio as psnr
 from src.train.models.ESRGAN import Generator, Discriminator
 from src.utils.readwrite import log_to_csv
 from src.utils.plot import plot_training_log
+from src.utils.eval import calculate_metrics
 from src.train.loss import CompositeLoss, gradient_penalty
+from src.train.logging import resume_models, resume_log
 
-def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_dir, resume=False):
+def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_dir, resume=False):
     # Initialize models
     generator = Generator(rrdb_count=rrdb_count).to("cuda")
     discriminator = Discriminator().to("cuda")
@@ -26,7 +25,13 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-    content_loss = CompositeLoss()
+    content_loss = CompositeLoss(weights={
+        "pixel": 0.3,
+        "perceptual": 1.0,
+        "edge": 0.0,
+        "fourier": 0.0001,
+        "style": 0.0
+    })
 
     if resume:
         resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
@@ -165,60 +170,5 @@ def loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_d
     torch.save(generator.state_dict(), f"{output_dir}/generator.pth")
     torch.save(discriminator.state_dict(), f"{output_dir}/discriminator.pth")
 
-def calculate_metrics(sr_batch, hr_batch):
-    ssim_total = 0.0
-    psnr_total = 0.0
-    batch_size = sr_batch.size(0)
-
-    for i in range(batch_size):
-        sr_img = sr_batch[i].squeeze().detach().cpu().numpy()
-        hr_img = hr_batch[i].squeeze().detach().cpu().numpy()
-
-        ssim_total += ssim(hr_img, sr_img, data_range=1.0)
-        psnr_total += psnr(hr_img, sr_img, data_range=1.0)
-
-    return ssim_total / batch_size, psnr_total / batch_size
-
-def resume_models(generator, discriminator, output_dir, pretrain_epochs):
-    models = os.listdir(output_dir)
-    resume_pretrain_epoch = 0 
-    resume_epoch = 0
-
-    def get_latest(name):
-        filtered = [m for m in models if m.startswith(name)]
-        return max(filtered, key=lambda x: int(x.split('_')[-1].split('.')[0])) if filtered else None
-    
-    pretrain_generator = get_latest("pretrain")
-    if pretrain_generator:
-        resume_pretrain_epoch = int(pretrain_generator.split('_')[-1].split('.')[0])
-        generator.load_state_dict(torch.load(os.path.join(output_dir, pretrain_generator)))
-        tqdm.write(f"Resuming Pretraining from epoch {resume_pretrain_epoch}")
-
-    generator_model = get_latest("generator")
-    if generator_model:
-        generator.load_state_dict(torch.load(os.path.join(output_dir, generator_model)))
-        resume_epoch = int(generator_model.split('_')[-1].split('.')[0])
-        resume_pretrain_epoch = pretrain_epochs
-        tqdm.write(f"Resuming Generator from epoch {resume_epoch}")
-
-    discriminator_model = get_latest("discriminator")
-    if discriminator_model:
-        discriminator.load_state_dict(torch.load(os.path.join(output_dir, discriminator_model)))
-        resume_pretrain_epoch = pretrain_epochs
-        tqdm.write(f"Resuming Discriminator from epoch {resume_epoch}")
-
-    return resume_pretrain_epoch, resume_epoch
-
-# Erase lines from epochs that are about to be rewritten
-def resume_log(csv_file, resume_epoch):
-    # Read all existing rows
-    with open(csv_file, mode='r') as f:
-        reader = csv.DictReader(f)
-        rows = [row for row in reader if int(row['epoch']) < resume_epoch]
-        fieldnames = reader.fieldnames
-
-    # Rewrite the file with filtered rows
-    with open(csv_file, mode='w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
+    pass
