@@ -3,10 +3,15 @@ import lmdb
 import pickle
 import gzip
 from src.train.models.ESRGAN import Generator
+from src.train.models.FSRCNN import FSRCNN
 
 def run_model_on_slice(model_path, lmdb_path, vol_name, set_type, slice_index, rrdb_count):
-    generator = Generator(rrdb_count=rrdb_count).to("cuda")
-    generator.load_state_dict(torch.load(model_path, map_location="cuda"))
+    if "esrgan" in model_path.lower():
+        model = Generator(rrdb_count=rrdb_count).to("cuda")
+    elif "fsrcnn" in model_path.lower():
+        model = FSRCNN().to("cuda")
+
+    model.load_state_dict(torch.load(model_path, map_location="cuda"))
 
     hr_key = f"{set_type}/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
     lr_key = f"{set_type}/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
@@ -18,7 +23,7 @@ def run_model_on_slice(model_path, lmdb_path, vol_name, set_type, slice_index, r
 
     lr_tensor = torch.tensor(lr_slice).unsqueeze(0).unsqueeze(0).to("cuda")
     with torch.no_grad():
-        sr_tensor = generator(lr_tensor)
+        sr_tensor = model(lr_tensor)
 
     sr_slice = sr_tensor.squeeze().cpu().numpy()
     hr_slice = hr_slice.squeeze()

@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from src.train.models.ESRGAN import Generator, Discriminator
+from src.train.models.FSRCNN import FSRCNN
 from src.utils.readwrite import log_to_csv
 from src.utils.plot import plot_training_log
 from src.utils.eval import calculate_metrics
@@ -171,4 +172,81 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
     torch.save(discriminator.state_dict(), f"{output_dir}/discriminator.pth")
 
 def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
-    pass
+    # Initialize model
+    model = FSRCNN().to("cuda")
+
+    # Initialize logging and resume settings
+    training_loss_file = os.path.join(output_dir, "training_loss.csv")
+    ssim_file = os.path.join(output_dir, "ssim.csv")
+    psnr_file = os.path.join(output_dir, "psnr.csv")
+
+    resume_epoch = 0
+    if resume:
+        # Set model
+        models = os.listdir(output_dir)
+
+        def get_latest(name):
+            filtered = [m for m in models if m.startswith(name)]
+            return max(filtered, key=lambda x: int(x.split('_')[-1].split('.')[0])) if filtered else None
+        
+        latest_model = get_latest("fsrcnn_epoch")
+        
+        # Set resume epoch by checking existing models
+        if latest_model:
+            resume_epoch = int(latest_model.split('_')[-1].split('.')[0])
+            model.load_state_dict(torch.load(os.path.join(output_dir, latest_model)))
+            tqdm.write(f"Resuming from epoch {resume_epoch}")
+        
+        # Set csv files
+        resume_log(training_loss_file, resume_epoch)
+        resume_log(ssim_file, resume_epoch)
+        resume_log(psnr_file, resume_epoch)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    criterion = nn.L1Loss()
+
+    ### --- Training Loop --- ###
+    for epoch in tqdm(range(resume_epoch + 1, epochs + 1)):
+        model.train()
+        for lr, hr in tqdm(train_loader):
+            lr, hr = lr.to("cuda"), hr.to("cuda")
+
+            sr = model(lr)
+            loss = criterion(sr, hr)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            log_to_csv(training_loss_file, {
+                "epoch": epoch, "loss": loss.item()
+            })
+
+        # Validation metrics
+        model.eval()
+        with torch.no_grad():
+            val_ssim_total = 0.0
+            val_psnr_total = 0.0
+            for val_lr, val_hr in tqdm(val_loader):
+                val_lr, val_hr = val_lr.to("cuda"), val_hr.to("cuda")
+                val_sr = model(val_lr)
+                ssim_val, psnr_val = calculate_metrics(val_sr, val_hr)
+                val_ssim_total += ssim_val
+                val_psnr_total += psnr_val
+
+            val_ssim_avg = val_ssim_total / len(val_loader)
+            val_psnr_avg = val_psnr_total / len(val_loader)
+
+            log_to_csv(ssim_file, {
+                "epoch": epoch,
+                "val_ssim": val_ssim_avg
+            })
+            log_to_csv(psnr_file, {
+                "epoch": epoch,
+                "val_psnr": val_psnr_avg
+            })
+
+        # Save model state
+        torch.save(model.state_dict(), f"{output_dir}/fsrcnn_epoch_{epoch}.pth")
+    
+    torch.save(model.state_dict(), f"{output_dir}/fsrcnn.pth")

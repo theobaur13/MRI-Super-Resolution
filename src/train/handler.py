@@ -1,6 +1,7 @@
 import os
 import torch
-from src.train.loop import GAN_loop
+from src.train.loop import GAN_loop, CNN_loop
+
 from torch.utils.data import DataLoader
 from src.train.dataset import LMDBDataset
 
@@ -28,4 +29,5 @@ def train(args):
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS)
 
-    GAN_loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, rrdb_count=RRDB_COUNT, output_dir=output_dir, resume=args.resume)
+    # GAN_loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, rrdb_count=RRDB_COUNT, output_dir=output_dir, resume=args.resume)
+    CNN_loop(train_loader, val_loader, epochs=EPOCHS, output_dir=output_dir, resume=args.resume)
