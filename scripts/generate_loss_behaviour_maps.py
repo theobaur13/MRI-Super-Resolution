@@ -12,7 +12,7 @@ from src.train.models.ESRGAN import Generator
 # For a specific loss type generate a map of L1 loss showing the difference between the pre-trained model and the model after training for 4 epochs.
 def main():
     # Load the pre-trained and trained models
-    loss_type = "fourier"
+    loss_type = "fourier"                   # Change this to "pixel", "perceptual", "edge", or "style" as needed
     epoch = 4
     trained_model_path = f"E:/ESRGAN_RRDB3_{loss_type}_50-100_20k/generator_epoch_{epoch}.pth"
     pretrained_model_path = f"E:/ESRGAN_RRDB3_{loss_type}_50-100_20k/pretrain_epoch_4.pth"
@@ -46,7 +46,7 @@ def main():
 
     # Plot the L1 loss map
     plt.figure(figsize=(10, 10))
-    plt.imshow(l1_loss, cmap='hot')
+    plt.imshow(l1_loss, cmap='hot', vmin=0, vmax=0.5)
     plt.colorbar(label='L1 Loss')
     plt.title(f'L1 Loss Map ({loss_type} loss)')
     plt.axis('off')

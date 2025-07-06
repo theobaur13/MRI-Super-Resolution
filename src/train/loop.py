@@ -203,7 +203,15 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
         resume_log(psnr_file, resume_epoch)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    criterion = nn.L1Loss()
+    criterion = CompositeLoss(
+        weights={
+            "pixel": 0.0,
+            "perceptual": 1.0,
+            "edge": 0.0,
+            "fourier": 0.0,
+            "style": 0.0
+        }
+    )
 
     ### --- Training Loop --- ###
     for epoch in tqdm(range(resume_epoch + 1, epochs + 1)):
@@ -218,9 +226,9 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
             loss.backward()
             optimizer.step()
 
-            log_to_csv(training_loss_file, {
-                "epoch": epoch, "loss": loss.item()
-            })
+            # log_to_csv(training_loss_file, {
+            #     "epoch": epoch, "loss": loss.item()
+            # })
 
         # Validation metrics
         model.eval()

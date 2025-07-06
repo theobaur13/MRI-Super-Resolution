@@ -44,6 +44,10 @@ def export_predictions(args):
         print(f"Found {len(vol_names)} volumes and {len(slice_indices)} slices per volume.")
 
         for vol_name in tqdm(vol_names, desc="Volumes"):
+            # Temporarily limit to a specific volume for testing
+            if vol_name == "BraTS-GLI-00082-000-t2f":
+                break
+
             vol_output_dir = os.path.join(output_dir, vol_name)
             os.makedirs(vol_output_dir, exist_ok=True)
 
@@ -51,7 +55,7 @@ def export_predictions(args):
                 save_path = os.path.join(vol_output_dir, f"{slice_index:03d}.png")
                 if os.path.exists(save_path):
                     continue  
-                
+
                 try:
                     sr_slice, hr_slice, lr_slice = run_model_on_slice(
                         model_path=model_path,
