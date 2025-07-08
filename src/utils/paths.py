@@ -5,7 +5,7 @@ def get_brats_paths(data_dir, seq=None, dataset=None):
     train_paths, validate_paths = [], []
 
     for dataset in datasets:
-        sequences = [seq] if seq else ["t1c", "t1n", "t2f", "t2w"]
+        sequences = [seq] if seq else ["t2f", "seg"]
         if dataset in ["BraSyn", "GLI", "MET"]:
             for split, paths in [("train", train_paths), ("validate", validate_paths)]:
                 dir_path = os.path.join(data_dir, dataset, split)

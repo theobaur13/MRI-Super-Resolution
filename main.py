@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from src.view import view
 from src.simulation.handler import simulate
 from src.train.handler import train
-from src.segment import segment
+from src.eval.handler import evaluate
 from src.generate_training_data import generate_training_data
 from src.predict import predict
 from src.error_map import error_map
@@ -15,6 +15,7 @@ if __name__ == "__main__":
     load_dotenv()
     LMDB_PATH = os.getenv("LMDB_PATH")
     BRATS_DIR= os.getenv("BRATS_DIR")
+    FLYWHEEL_DIR = os.getenv("FLYWHEEL_DIR")
 
     # Set up directories
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -45,12 +46,6 @@ if __name__ == "__main__":
     view_parser.add_argument("--path", type=str, required=True, help="Path to NIfTI file to view")
     view_parser.add_argument("--slice", type=int, default=24, help="Slice index for viewing")
     view_parser.add_argument("--axis", type=int, default=2, help="Axis for viewing")
-    
-    # Subparser for segmenting data
-    # py main.py segment --limit 1
-    segment_parser = subparsers.add_parser("segment", help="Segment NIfTI data into white matter, grey matter, and CSF")
-    segment_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
-    segment_parser.add_argument("--limit", type=int, default=1, help="Limit the number of files to segment")
 
     # Subparser for training a model
     # py main.py train --output_dir "E:\models" --resume True
@@ -87,6 +82,14 @@ if __name__ == "__main__":
     export_predictions_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for predictions")
     export_predictions_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
+    # Subparser for evaluating a model using various methods
+    evaluate_parser = subparsers.add_parser("evaluate", help="Evaluate a model using various methods")
+    evaluate_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
+    evaluate_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
+    evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
+    evaluate_parser.add_argument("--working_dir", type=str, required=True, help="Output directory for segmentation results")
+    evaluate_parser.add_argument("--method", type=str, choices=["matter"], required=True, help="Evaluation method to use")
+
     args = parser.parse_args()
     action = args.action.lower()
 
@@ -101,10 +104,6 @@ if __name__ == "__main__":
     # View a slice of a NIfTI file
     elif action == "view":
         view(args)
-
-    # Segment a NIfTI file into white matter, grey matter, and CSF
-    elif action =="segment":
-        segment(args)
 
     # Train a model on the dataset
     elif action == "train":
@@ -121,3 +120,7 @@ if __name__ == "__main__":
     # Run model on dataset and export results
     elif action == "export-predictions":
         export_predictions(args)
+
+    # Evaluate a model using various methods
+    elif action == "evaluate":
+        evaluate(args)

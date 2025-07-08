@@ -1,4 +1,5 @@
 import numpy as np
+import nibabel as nib
 import jax.numpy as jnp
 from jax.numpy.fft import fftshift, ifftshift, fftn, ifftn
 
@@ -25,3 +26,10 @@ def numpy_to_jax(x):
         return jnp.array(x)
     else:
         raise TypeError("Input must be a NumPy array.")
+    
+def numpy_to_nifti(array, affine=None):
+    """Convert a NumPy array to a NIfTI image."""
+    if affine is None:
+        affine = np.eye(4)  # Default affine if not provided
+    nifti_image = nib.Nifti1Image(array, affine)
+    return nifti_image
