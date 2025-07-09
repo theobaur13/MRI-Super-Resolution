@@ -4,22 +4,15 @@ import subprocess
 import lmdb
 import numpy as np
 from tqdm import tqdm
-from src.utils.inference import run_model_on_slice
+from src.utils.inference import load_model, run_model_on_slice
 from src.utils.conversions import numpy_to_nifti
 from src.utils.readwrite import write_nifti
+from src.eval.helpers import group_slices, get_LMDB_validate_paths
 
 def matter(model_path, lmdb_path, flywheel_dir, working_dir):
     # Retrieve all "validate" slices from the LMDB dataset
     env = lmdb.open(lmdb_path, readonly=True)
-    validate_prefix = b"validate/"
-    print(f"Retrieving validate slices from LMDB...")
-    with env.begin() as txn:
-        cursor = txn.cursor()
-        validation_paths = []
-        if cursor.set_range(validate_prefix):
-            for key, _ in tqdm(cursor):
-                if key.startswith(validate_prefix):
-                    validation_paths.append(key.decode('utf-8'))
+    validation_paths = get_LMDB_validate_paths(env)
 
     print(f"Found {len(validation_paths)} validate slices in LMDB dataset.")
 
@@ -31,6 +24,9 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir):
 
     input_dir = os.path.join(working_dir, "input")
     os.makedirs(input_dir, exist_ok=True)
+
+    # Load the model
+    model = load_model(model_path)
 
     # Run LR slices through the model
     print(f"Processing {len(grouped_lr_paths)} volumes with LR slices...")
@@ -48,12 +44,11 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir):
 
         for lr_slice_key in slices:
             sr_slice, hr_slice, _ = run_model_on_slice(
-                model_path=model_path,
+                model=model,
                 lmdb_path=lmdb_path,
                 vol_name=volume,
                 set_type="validate",
                 slice_index=int(lr_slice_key.split("/")[-1]),
-                rrdb_count=3
             )
 
             sr_slices.append(sr_slice)
@@ -77,20 +72,6 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir):
 
     # Calculate MSE for WM, GM, CSF for SR and HR
     pass
-
-def group_slices(slices):
-    grouped = {}
-    for slice_key in slices:
-        parts = slice_key.split('/')
-        vol_id = parts[1]  # Extract volume ID
-        if vol_id not in grouped:
-            grouped[vol_id] = []
-        grouped[vol_id].append(slice_key)
-
-    # Order the slices by their index
-    for vol_id, slice_keys in grouped.items():
-        slice_keys.sort(key=lambda x: int(x.split("/")[-1]))
-    return grouped
 
 def segment(flywheel_dir, input_dir, output_dir):
     # Set up directories

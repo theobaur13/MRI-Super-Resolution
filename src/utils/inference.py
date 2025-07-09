@@ -5,14 +5,16 @@ import gzip
 from src.train.models.ESRGAN import Generator
 from src.train.models.FSRCNN import FSRCNN
 
-def run_model_on_slice(model_path, lmdb_path, vol_name, set_type, slice_index, rrdb_count):
+def load_model(model_path, rrdb_count=3):
     if "esrgan" in model_path.lower():
         model = Generator(rrdb_count=rrdb_count).to("cuda")
     elif "fsrcnn" in model_path.lower():
         model = FSRCNN().to("cuda")
-
     model.load_state_dict(torch.load(model_path, map_location="cuda"))
+    model.eval()
+    return model
 
+def run_model_on_slice(model, lmdb_path, vol_name, set_type, slice_index):
     hr_key = f"{set_type}/{vol_name}/HR/{slice_index:03d}".encode("utf-8")
     lr_key = f"{set_type}/{vol_name}/LR/{slice_index:03d}".encode("utf-8")
 

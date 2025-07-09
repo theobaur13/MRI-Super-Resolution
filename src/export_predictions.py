@@ -2,7 +2,7 @@ import os
 import lmdb
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from src.utils.inference import run_model_on_slice
+from src.utils.inference import load_model, run_model_on_slice
 from src.utils.plot import plot_lr_sr_hr
 
 def export_predictions(args):
@@ -43,33 +43,35 @@ def export_predictions(args):
 
         print(f"Found {len(vol_names)} volumes and {len(slice_indices)} slices per volume.")
 
-        for vol_name in tqdm(vol_names, desc="Volumes"):
-            # Temporarily limit to a specific volume for testing
-            if vol_name == "BraTS-GLI-00082-000-t2f":
-                break
+    # Load the model
+    model = load_model(model_path, rrdb_count=rrdb_count)
 
-            vol_output_dir = os.path.join(output_dir, vol_name)
-            os.makedirs(vol_output_dir, exist_ok=True)
+    for vol_name in tqdm(vol_names, desc="Volumes"):
+        # Temporarily limit to a specific volume for testing
+        if vol_name == "BraTS-GLI-00082-000-t2f":
+            break
 
-            for slice_index in tqdm(slice_indices, desc=f"Slices ({vol_name})", leave=False):
+        vol_output_dir = os.path.join(output_dir, vol_name)
+        os.makedirs(vol_output_dir, exist_ok=True)
+
+        for slice_index in tqdm(slice_indices, desc=f"Slices ({vol_name})", leave=False):
+            save_path = os.path.join(vol_output_dir, f"{slice_index:03d}.png")
+            if os.path.exists(save_path):
+                continue  
+
+            try:
+                sr_slice, hr_slice, lr_slice = run_model_on_slice(
+                    model=model,
+                    lmdb_path=lmdb_path,
+                    vol_name=vol_name,
+                    set_type="validate",
+                    slice_index=slice_index
+                )
+
+                fig = plot_lr_sr_hr(lr_slice, sr_slice, hr_slice)
                 save_path = os.path.join(vol_output_dir, f"{slice_index:03d}.png")
-                if os.path.exists(save_path):
-                    continue  
+                fig.savefig(save_path)
+                plt.close(fig)
 
-                try:
-                    sr_slice, hr_slice, lr_slice = run_model_on_slice(
-                        model_path=model_path,
-                        lmdb_path=lmdb_path,
-                        vol_name=vol_name,
-                        set_type="validate",
-                        slice_index=slice_index,
-                        rrdb_count=rrdb_count
-                    )
-
-                    fig = plot_lr_sr_hr(lr_slice, sr_slice, hr_slice)
-                    save_path = os.path.join(vol_output_dir, f"{slice_index:03d}.png")
-                    fig.savefig(save_path)
-                    plt.close(fig)
-
-                except Exception as e:
-                    print(f"[ERROR] Volume: {vol_name}, Slice: {slice_index:03d} -> {e}")
+            except Exception as e:
+                print(f"[ERROR] Volume: {vol_name}, Slice: {slice_index:03d} -> {e}")
