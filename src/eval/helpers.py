@@ -1,4 +1,7 @@
+import lmdb
+import torch
 from tqdm import tqdm
+from src.utils.inference import load_model, run_model_on_slice
 
 def group_slices(slices):
     grouped = {}
@@ -25,3 +28,37 @@ def get_LMDB_validate_paths(env):
                 if key.startswith(validate_prefix):
                     validation_paths.append(key.decode("utf-8"))
     return validation_paths
+
+def get_grouped_validation_slices(lmdb_path):
+    env = lmdb.open(lmdb_path, readonly=True, lock=False)
+    validation_paths = get_LMDB_validate_paths(env)
+    lr_paths = [p for p in validation_paths if "LR" in p]
+    grouped_lr_paths = group_slices(lr_paths)
+    return grouped_lr_paths
+
+def generate_SR_HR(model_path, lmdb_path):
+    grouped_lr_paths = get_grouped_validation_slices(lmdb_path)
+    print(f"Found {len(grouped_lr_paths)} validation volumes.")
+
+    # Load the model
+    model = load_model(model_path)
+    model.eval()
+
+    # Process each volume's LR slices
+    with torch.no_grad():
+        for volume, slice_keys in grouped_lr_paths.items():
+            for lr_slice_key in slice_keys:
+                slice_index = int(lr_slice_key.split("/")[-1])
+                sr_slice, hr_slice, _ = run_model_on_slice(
+                    model=model,
+                    lmdb_path=lmdb_path,
+                    vol_name=volume,
+                    set_type="validate",
+                    slice_index=slice_index,
+                )
+
+                # Yield as PyTorch tensors
+                yield (
+                    torch.tensor(sr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
+                    torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+                )

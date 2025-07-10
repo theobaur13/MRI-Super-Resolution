@@ -88,7 +88,7 @@ if __name__ == "__main__":
     evaluate_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")
-    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae"], required=True, help="Evaluation method to use")
+    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr"], required=True, help="Evaluation method to use")
 
     args = parser.parse_args()
     action = args.action.lower()
