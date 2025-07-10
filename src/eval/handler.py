@@ -2,6 +2,7 @@ from src.eval.matter import matter
 from src.eval.mae import mae
 from src.eval.ssim import ssim
 from src.eval.psnr import psnr
+from src.eval.lpips import LPIPS
 
 def evaluate(args):
     method = args.method.lower()
@@ -14,3 +15,5 @@ def evaluate(args):
         ssim(args.model_path, args.lmdb_path)
     elif method == "psnr":
         psnr(args.model_path, args.lmdb_path)
+    elif method == "lpips":
+        LPIPS(args.model_path, args.lmdb_path)
