@@ -1,6 +1,10 @@
 import lmdb
 import torch
+import os
+import numpy as np
 from tqdm import tqdm
+from src.utils.readwrite import write_nifti
+from src.utils.conversions import numpy_to_nifti
 from src.utils.inference import load_model, run_model_on_slice
 
 def group_slices(slices):
@@ -62,3 +66,43 @@ def generate_SR_HR(model_path, lmdb_path):
                     torch.tensor(sr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
                     torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
                 )
+
+def generate_SR_HR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path):
+    for volume, slices in tqdm(grouped_lr_paths.items(), desc="Processing LR slices"):
+        sr_nifti_path = os.path.join(input_dir, f"{volume}_sr.nii.gz")
+        hr_nifti_path = os.path.join(input_dir, f"{volume}_hr.nii.gz")
+
+        # Skip if the NIfTI files already exist
+        if os.path.exists(sr_nifti_path) and os.path.exists(hr_nifti_path):
+            print(f"Skipping {volume} (already processed)")
+            continue
+        
+        sr_slices = []
+        hr_slices = []
+
+        for lr_slice_key in slices:
+            sr_slice, hr_slice, _ = run_model_on_slice(
+                model=model,
+                lmdb_path=lmdb_path,
+                vol_name=volume,
+                set_type="validate",
+                slice_index=int(lr_slice_key.split("/")[-1]),
+            )
+
+            sr_slices.append(sr_slice)
+            hr_slices.append(hr_slice)
+
+        # Stack the slices to create 3D volumes
+        sr_volume = np.stack(sr_slices, axis=-1)
+        hr_volume = np.stack(hr_slices, axis=-1)
+
+        # Any values close to 0 are set to 0
+        sr_volume[sr_volume < 0.01] = 0
+
+        # Create NIfTI images from the volumes
+        sr_nifti = numpy_to_nifti(sr_volume)
+        hr_nifti = numpy_to_nifti(hr_volume)
+
+        # Write the NIfTI images to output directory
+        write_nifti(sr_nifti, sr_nifti_path)
+        write_nifti(hr_nifti, hr_nifti_path)
