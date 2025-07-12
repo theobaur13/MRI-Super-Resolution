@@ -14,20 +14,11 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir):
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Load the model
-    model = load_model(model_path)
-
-    # Get grouped validation paths from LMDB
     grouped_lr_paths = get_grouped_validation_slices(lmdb_path)
-
-    # Run LR slices through the model
-    print(f"Processing {len(grouped_lr_paths)} volumes with LR slices...")
+    model = load_model(model_path)
     generate_SR_HR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path)
 
-    # Run HR and SR volumes through the FSL FAST segmentation
     segment_matter(flywheel_dir, input_dir, output_dir)
-
-    # Calculate MSE for WM, GM, CSF for SR and HR
     calculate_mae(output_dir, "gm")
 
 def segment_matter(flywheel_dir, input_dir, output_dir):
@@ -51,7 +42,7 @@ def segment_matter(flywheel_dir, input_dir, output_dir):
 
         src = os.path.join(input_dir, nifti)
         dest = os.path.join(flywheel_input_dir, nifti)
-        shutil.move(src, dest)
+        shutil.copy(src, dest)
 
         # Run segmentation using FSL FAST
         subprocess.run([

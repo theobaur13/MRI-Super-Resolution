@@ -16,6 +16,7 @@ if __name__ == "__main__":
     LMDB_PATH = os.getenv("LMDB_PATH")
     BRATS_DIR= os.getenv("BRATS_DIR")
     FLYWHEEL_DIR = os.getenv("FLYWHEEL_DIR")
+    LATUP_PATH = os.getenv("LATUP_PATH")
 
     # Set up directories
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -87,8 +88,9 @@ if __name__ == "__main__":
     evaluate_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     evaluate_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
+    evaluate_parser.add_argument("--latup_path", type=str, default=LATUP_PATH, help="Path to LATUPNet model for tumor segmentation")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")
-    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips"], required=True, help="Evaluation method to use")
+    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips", "tumor"], required=True, help="Evaluation method to use")
 
     args = parser.parse_args()
     action = args.action.lower()
