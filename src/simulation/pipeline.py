@@ -9,7 +9,6 @@ from src.utils.conversions import (
     jax_to_numpy,
 )
 from src.simulation.transformations import (
-    matter_contrast,
     cylindrical_crop,
     cartesian_undersampling,
     reconstruct_cartesian,
@@ -33,9 +32,6 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     images = {}
 
     images["1_original"] = image
-
-    # image = matter_contrast(image, path)
-    # images["matter_contrast"] = image
 
     ### === k-Space Domain === ###
     kspace = convert_to_kspace(image)

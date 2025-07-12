@@ -1,4 +1,3 @@
-import torch
 from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 
@@ -15,11 +14,3 @@ def calculate_metrics(sr_batch, hr_batch):
         psnr_total += psnr(hr_img, sr_img, data_range=1.0)
 
     return ssim_total / batch_size, psnr_total / batch_size
-
-def calculate_mae(sr_batch, hr_batch):
-    # shape: [N, 1, H, W] -> [N, H, W]
-    sr = sr_batch[:, 0]
-    hr = hr_batch[:, 0]
-
-    mae = torch.mean(torch.abs(sr - hr))  # scalar
-    return mae.item()
