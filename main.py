@@ -33,7 +33,7 @@ if __name__ == "__main__":
     simulate_parser.add_argument("--slice", type=int, default=24, help="Slice index for simulation")
 
     # Subparser for generating training data
-    # > py main.py generate-training-data --output_dir "E:\data-brats-2024_simulated" --axis 2 --limit 100 --seq "t2f"
+    # > py main.py generate-training-data --output_dir "E:\data-brats-2024_simulated" --seq "t2f"
     generate_training_data_parser = subparsers.add_parser("generate-training-data", help="Generate simulated training data for BraTS")
     generate_training_data_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
     generate_training_data_parser.add_argument("--output_dir", type=str, help="Output directory for converted data")

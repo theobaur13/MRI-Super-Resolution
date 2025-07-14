@@ -13,12 +13,12 @@ def train(args):
         os.makedirs(output_dir)
 
     # Constants
-    BATCH_SIZE = 4
+    BATCH_SIZE = 8
     EPOCHS = 20
     PRETRAIN_EPOCHS = 4
     NUM_WORKERS = 4
-    USEFUL_RANGE = (50, 100)
-    LIMIT = 20000
+    USEFUL_RANGE = (10, 145)
+    LIMIT = 200000
     RRDB_COUNT = 3
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path,split="train", limit=LIMIT, useful_range=USEFUL_RANGE)
@@ -30,4 +30,4 @@ def train(args):
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS)
 
     GAN_loop(train_loader, val_loader, epochs=EPOCHS, pretrain_epochs=PRETRAIN_EPOCHS, rrdb_count=RRDB_COUNT, output_dir=output_dir, resume=args.resume)
-    CNN_loop(train_loader, val_loader, epochs=EPOCHS, output_dir=output_dir, resume=args.resume)
+    # CNN_loop(train_loader, val_loader, epochs=EPOCHS, output_dir=output_dir, resume=args.resume)

@@ -16,9 +16,9 @@ def generate_training_data(args):
     limit = args.limit
     axis = args.axis
     seq = args.seq
-    batch_size = 2
-    useful_range = (20, 140)
-    map_size = int(200 * 1024 * 1024 * 1024)
+    batch_size = 8
+    useful_range = (1, 150)
+    map_size = int(60 * 1024 * 1024 * 1024)
 
     env = lmdb.open(output_dir, map_size=map_size)
     train_paths, validate_paths = get_brats_paths(brats_dir, seq, dataset="BraSyn")
@@ -36,19 +36,18 @@ def generate_training_data(args):
                 ids.append(vol_id)
 
             if not images:
-                print(f"No images found for {split_name} batch {i // batch_size + 1}")
                 continue
 
             batch_np = np.stack(images).astype(np.float32)
             batch_jax = jnp.array(batch_np)
             batch_results, _ = simulate_batch(batch_jax, axis)
 
-            for idx, vol_id in enumerate(ids):
+            for idx, vol_id in tqdm(enumerate(ids), total=len(ids), leave=False):
                 hr_vol = batch_np[idx]
                 lr_vol = jax_to_numpy(batch_results["final"][idx])
 
                 with env.begin(write=True) as txn:
-                    for s in range(*useful_range):
+                    for s in tqdm(range(*useful_range), leave=False):
                         hr_slice = np.take(hr_vol, s, axis=axis).astype(np.float32)
                         lr_slice = np.take(lr_vol, s, axis=axis).astype(np.float32)
 

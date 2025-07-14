@@ -7,9 +7,9 @@ from src.train.models.FSRCNN import FSRCNN
 
 def load_model(model_path, rrdb_count=3):
     if "esrgan" in model_path.lower():
-        model = Generator(rrdb_count=rrdb_count).to("cuda")
+        model = torch.compile(Generator(rrdb_count=rrdb_count).to("cuda"), backend="eager")
     elif "fsrcnn" in model_path.lower():
-        model = FSRCNN().to("cuda")
+        model = torch.compile(FSRCNN().to("cuda"), backend="eager")
     model.load_state_dict(torch.load(model_path, map_location="cuda"))
     model.eval()
     return model

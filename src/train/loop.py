@@ -12,55 +12,69 @@ from src.train.logging import resume_models, resume_log
 
 def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, output_dir, resume=False):
     # Initialize models
-    generator = Generator(rrdb_count=rrdb_count).to("cuda")
-    discriminator = Discriminator().to("cuda")
-
-    # Initialize logging and resume settings
-    resume_pretrain_epoch = 0
-    resume_epoch = 0
-    training_loss_file = os.path.join(output_dir, "training_loss.csv")
-    ssim_file = os.path.join(output_dir, "ssim.csv")
-    psnr_file = os.path.join(output_dir, "psnr.csv")
-    individual_losses_file = os.path.join(output_dir, "individual_losses.csv")
+    generator = torch.compile(Generator(rrdb_count=rrdb_count).to("cuda"), backend="eager")
+    discriminator = torch.compile(Discriminator().to("cuda"), backend="eager")
 
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     content_loss = CompositeLoss(weights={
-        "pixel": 0.3,
-        "perceptual": 1.0,
-        "edge": 0.0,
-        "fourier": 0.0001,
-        "style": 0.0
+        # "pixel": 0.3,
+        # "perceptual": 1.0,
+        # "edge": 0.0,
+        # "fourier": 0.0001,
+        # "style": 0.0
     })
+    mae_loss = nn.L1Loss()
+    scaler = torch.amp.GradScaler()
+
+    # Initialize logging and resume settings
+    resume_pretrain_epoch = 0
+    resume_epoch = 0
+    pretrain_loss_file = os.path.join(output_dir, "pretrain_loss.csv")
+    training_loss_file = os.path.join(output_dir, "training_loss.csv")
+    ssim_file = os.path.join(output_dir, "ssim.csv")
+    psnr_file = os.path.join(output_dir, "psnr.csv")
+    individual_losses_file = os.path.join(output_dir, "individual_losses.csv")
 
     if resume:
         resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
         if resume_pretrain_epoch == pretrain_epochs:
+            resume_log(pretrain_loss_file, resume_pretrain_epoch)
             resume_log(training_loss_file, resume_epoch)
             resume_log(ssim_file, resume_epoch)
             resume_log(psnr_file, resume_epoch)
 
     ### --- Pretraining the Generator --- ###
     for epoch in tqdm(range(resume_pretrain_epoch + 1, pretrain_epochs + 1)):
-        for lr, hr in tqdm(train_loader):
+        count = 0
+        for lr, hr in tqdm(train_loader, leave=False):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
-            sr = generator(lr)
-            loss = nn.L1Loss()(sr, hr)
+            with torch.amp.autocast("cuda"):
+                sr = generator(lr)
+                loss = mae_loss(sr, hr)
+
             gen_optimizer.zero_grad()
-            loss.backward()
-            gen_optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(gen_optimizer)
+            scaler.update()
+
+            count += 1
+            if count % int(len(train_loader) / 50) == 0:
+                log_to_csv(pretrain_loss_file, {
+                    "epoch": epoch,
+                    "batch": count,
+                    "loss": loss.item()
+                })
 
         torch.save(generator.state_dict(), f"{output_dir}/pretrain_epoch_{epoch}.pth")
         tqdm.write(f"Pretrain Epoch [{epoch}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
     ### --- Adversarial Training --- ###
-    best_ssim, best_psnr = 0.0, 0.0
-
     for epoch in tqdm(range(resume_epoch + 1, epochs)):
         count = 0
-        for lr, hr in tqdm(train_loader):
+        for lr, hr in tqdm(train_loader, leave=False):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
             # Train Discriminator
@@ -91,7 +105,7 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
             gen_optimizer.step()
 
             count += 1
-            if count % int(len(train_loader) / 50) == 0:  # Print every 10% of the set
+            if count % int(len(train_loader) / 100) == 0:
                 log_to_csv(training_loss_file, {
                     "epoch": epoch,
                     "batch": count,
@@ -110,6 +124,11 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
 
                 log_to_csv(individual_losses_file, individual_loss_data)
 
+            # Save model state
+            if count % int(len(train_loader) / 4) == 0:
+                torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch}.pth")
+                torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch}.pth")
+
             if count % int(len(train_loader) / 2) == 0:  # Print every 50% of the set
                 # Training Metrics
                 ssim_avg, psnr_avg = calculate_metrics(sr, hr)
@@ -119,7 +138,7 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
                 with torch.no_grad():
                     val_ssim_total = 0.0
                     val_psnr_total = 0.0
-                    for val_lr, val_hr in tqdm(val_loader):
+                    for val_lr, val_hr in tqdm(val_loader, leave=False):
                         val_lr, val_hr = val_lr.to("cuda"), val_hr.to("cuda")
                         val_sr = generator(val_lr)
                         ssim_val, psnr_val = calculate_metrics(val_sr, val_hr)
@@ -129,18 +148,6 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
                     val_ssim_avg = val_ssim_total / len(val_loader)
                     val_psnr_avg = val_psnr_total / len(val_loader)
                     tqdm.write(f"Epoch [{epoch}/{epochs}], Validation SSIM: {val_ssim_avg:.4f}, Validation PSNR: {val_psnr_avg:.4f}")
-
-                    if val_ssim_avg > best_ssim:
-                        best_ssim = val_ssim_avg
-                        torch.save(generator.state_dict(), f"{output_dir}/best_generator.pth")
-                        torch.save(discriminator.state_dict(), f"{output_dir}/best_discriminator.pth")
-                        tqdm.write(f"New best SSIM: {best_ssim:.4f}, model saved.")
-
-                    if val_psnr_avg > best_psnr:
-                        best_psnr = val_psnr_avg
-                        torch.save(generator.state_dict(), f"{output_dir}/best_generator_psnr.pth")
-                        torch.save(discriminator.state_dict(), f"{output_dir}/best_discriminator_psnr.pth")
-                        tqdm.write(f"New best PSNR: {best_psnr:.4f}, model saved.")
 
                 # Log metrics
                 log_to_csv(ssim_file, {
@@ -157,19 +164,12 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
                     "val_psnr": val_psnr_avg
                 })
 
-                # Plot training log
-                # plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
-                # plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
-                # plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
-                # plot_training_log(individual_losses_file, output_file=os.path.join(output_dir, "individual_losses_plot.png"))
-
-                # Save generator state
-                torch.save(generator.state_dict(), f"{output_dir}/generator_epoch_{epoch}.pth")
-                torch.save(discriminator.state_dict(), f"{output_dir}/discriminator_epoch_{epoch}.pth")
-    
-    # Save the model
-    torch.save(generator.state_dict(), f"{output_dir}/generator.pth")
-    torch.save(discriminator.state_dict(), f"{output_dir}/discriminator.pth")
+    # Plot training log
+    plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
+    plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
+    plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
+    plot_training_log(individual_losses_file, output_file=os.path.join(output_dir, "individual_losses_plot.png"))
+    tqdm.write(f"Training completed. Models saved to {output_dir}")
 
 def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
     # Initialize model
@@ -216,7 +216,7 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
     ### --- Training Loop --- ###
     for epoch in tqdm(range(resume_epoch + 1, epochs + 1)):
         model.train()
-        for lr, hr in tqdm(train_loader):
+        for lr, hr in tqdm(train_loader, leave=False):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
             sr = model(lr)
@@ -226,16 +226,16 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
             loss.backward()
             optimizer.step()
 
-            # log_to_csv(training_loss_file, {
-            #     "epoch": epoch, "loss": loss.item()
-            # })
+            log_to_csv(training_loss_file, {
+                "epoch": epoch, "loss": loss.item()
+            })
 
         # Validation metrics
         model.eval()
         with torch.no_grad():
             val_ssim_total = 0.0
             val_psnr_total = 0.0
-            for val_lr, val_hr in tqdm(val_loader):
+            for val_lr, val_hr in tqdm(val_loader, leave=False):
                 val_lr, val_hr = val_lr.to("cuda"), val_hr.to("cuda")
                 val_sr = model(val_lr)
                 ssim_val, psnr_val = calculate_metrics(val_sr, val_hr)
@@ -257,4 +257,8 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
         # Save model state
         torch.save(model.state_dict(), f"{output_dir}/fsrcnn_epoch_{epoch}.pth")
     
-    torch.save(model.state_dict(), f"{output_dir}/fsrcnn.pth")
+    # Plot training log
+    plot_training_log(training_loss_file, output_file=os.path.join(output_dir, "training_loss_plot.png"))
+    plot_training_log(ssim_file, output_file=os.path.join(output_dir, "ssim_plot.png"))
+    plot_training_log(psnr_file, output_file=os.path.join(output_dir, "psnr_plot.png"))
+    tqdm.write(f"Training completed. Models saved to {output_dir}")

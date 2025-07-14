@@ -32,8 +32,8 @@ class CompositeLoss(nn.Module):
             sr = sr.repeat(1, 3, 1, 1)
             hr = hr.repeat(1, 3, 1, 1)
 
-        sr_norm = torch.stack([self.vgg_normalize(s) for s in sr])
-        hr_norm = torch.stack([self.vgg_normalize(h) for h in hr])
+        sr_norm = self.vgg_normalize(sr)
+        hr_norm = self.vgg_normalize(hr)
 
         sr_feat = self.perceptual_vgg(sr_norm)
         hr_feat = self.perceptual_vgg(hr_norm)
