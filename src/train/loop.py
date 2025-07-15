@@ -18,13 +18,7 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-    content_loss = CompositeLoss(weights={
-        # "pixel": 0.3,
-        # "perceptual": 1.0,
-        # "edge": 0.0,
-        # "fourier": 0.0001,
-        # "style": 0.0
-    })
+    content_loss = CompositeLoss()
     mae_loss = nn.L1Loss()
     scaler = torch.amp.GradScaler()
 
@@ -40,7 +34,6 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
     if resume:
         resume_pretrain_epoch, resume_epoch = resume_models(generator, discriminator, output_dir, pretrain_epochs)
         if resume_pretrain_epoch == pretrain_epochs:
-            resume_log(pretrain_loss_file, resume_pretrain_epoch)
             resume_log(training_loss_file, resume_epoch)
             resume_log(ssim_file, resume_epoch)
             resume_log(psnr_file, resume_epoch)
@@ -72,37 +65,36 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
         tqdm.write(f"Pretrain Epoch [{epoch}/{pretrain_epochs}], Loss: {loss.item():.4f}")
 
     ### --- Adversarial Training --- ###
-    for epoch in tqdm(range(resume_epoch + 1, epochs)):
+    for epoch in tqdm(range(resume_epoch + 1, epochs + 1)):
         count = 0
         for lr, hr in tqdm(train_loader, leave=False):
             lr, hr = lr.to("cuda"), hr.to("cuda")
 
-            # Train Discriminator
-            sr = generator(lr).detach()
-
-            real_pred = discriminator(hr)
-            fake_pred = discriminator(sr)
-
-            gp = gradient_penalty(discriminator, hr, sr, device="cuda", lambda_gp=10)
-
-            disc_loss = fake_pred.mean() - real_pred.mean() + gp
+            ### --- Train Discriminator --- ###
+            with torch.amp.autocast("cuda"):
+                sr = generator(lr).detach()
+                real_pred = discriminator(hr)
+                fake_pred = discriminator(sr)
+                gp = gradient_penalty(discriminator, hr, sr, device="cuda", lambda_gp=10)
+                disc_loss = fake_pred.mean() - real_pred.mean() + gp
 
             disc_optimizer.zero_grad()
-            disc_loss.backward()
-            disc_optimizer.step()
+            scaler.scale(disc_loss).backward()
+            scaler.step(disc_optimizer)
+            scaler.update()
 
-            # Train Generator
-            sr = generator(lr)
-            fake_pred = discriminator(sr)
+            ### --- Train Generator --- ###
+            with torch.amp.autocast("cuda"):
+                sr = generator(lr)
+                fake_pred = discriminator(sr)
+                gen_adv_loss = -fake_pred.mean()
+                gen_content_loss, losses = content_loss(sr, hr, logging=True)
+                gen_loss = gen_content_loss + 0.001 * gen_adv_loss
 
-            gen_adv_loss = -fake_pred.mean()
-
-            gen_content_loss, losses = content_loss(sr, hr, logging=True)
-            gen_loss = gen_content_loss + 0.001 * gen_adv_loss
-            
             gen_optimizer.zero_grad()
-            gen_loss.backward()
-            gen_optimizer.step()
+            scaler.scale(gen_loss).backward()
+            scaler.step(gen_optimizer)
+            scaler.update()
 
             count += 1
             if count % int(len(train_loader) / 100) == 0:
