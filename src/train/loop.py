@@ -18,7 +18,13 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
     # Initialize optimizers and loss functions
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-    content_loss = CompositeLoss()
+    content_loss = CompositeLoss(weights={
+        "edge": 0.7,
+        "pixel": 0.3,
+        "perceptual": 1.0,
+        "fourier": 0.0,
+        "style": 0.0
+    })
     mae_loss = nn.L1Loss()
     scaler = torch.amp.GradScaler()
 
@@ -97,7 +103,7 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
             scaler.update()
 
             count += 1
-            if count % int(len(train_loader) / 100) == 0:
+            if count % int(len(train_loader) / 200) == 0:
                 log_to_csv(training_loss_file, {
                     "epoch": epoch,
                     "batch": count,

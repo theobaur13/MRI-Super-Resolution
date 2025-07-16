@@ -54,6 +54,15 @@ class LMDBDataset(Dataset):
                         if not (self.useful_range[0] <= slice_idx < self.useful_range[1]):
                             continue
                         
+                        # Check if HR slice contains only zeroes
+                        hr_bytes = txn.get(key)
+                        if hr_bytes is None:
+                            continue
+
+                        hr_slice = pickle.loads(gzip.decompress(hr_bytes))
+                        if np.max(hr_slice) == np.min(hr_slice) or np.std(hr_slice) < 1e-5:
+                            continue
+
                         lr_key = key_str.replace("/HR/", "/LR/")
                         self.pairs.append((lr_key, key_str))
                         count += 1
