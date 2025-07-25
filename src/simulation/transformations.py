@@ -117,21 +117,15 @@ def cylindrical_crop(kspace, axis, factor=0.5, edge_smoothing=0.5):
     return kspace * tapered_mask
 
 # This function adds Rician noise to the image.
-def rician_noise(image, base_noise, key=42):
+def rician_noise(kspace, base_noise, key=42):
     key_obj = random.PRNGKey(key)
     key_real, key_imag = random.split(key_obj)
 
-    signal_real = jnp.real(image)
-    signal_imag = jnp.imag(image)
+    noise_real = random.normal(key_real, shape=kspace.shape) * base_noise
+    noise_imag = random.normal(key_imag, shape=kspace.shape) * base_noise
 
-    noise_real = random.normal(key_real, shape=image.shape) * base_noise
-    noise_imag = random.normal(key_imag, shape=image.shape) * base_noise
-
-    noisy_real = signal_real + noise_real
-    noisy_imag = signal_imag + noise_imag
-
-    noisy_image = jnp.sqrt(noisy_real**2 + noisy_imag**2)
-    return noisy_image
+    noisy_complex = kspace + (noise_real + 1j * noise_imag)
+    return noisy_complex
 
 def partial_fourier(kspace, axis, fraction=0.625):
     target_axis = (axis + 2) % 3

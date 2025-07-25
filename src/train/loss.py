@@ -113,7 +113,7 @@ def gradient_penalty(discriminator, real, fake, device="cuda", lambda_gp=10):
     alpha = torch.rand(batch_size, 1, 1, 1, device=device, dtype=real.dtype)
     interpolated = (alpha * real + (1 - alpha) * fake).requires_grad_(True)
 
-    with torch.amp.autocast("cuda", enabled=False):
+    with torch.amp.autocast(device, enabled=False):
         pred = discriminator(interpolated.float())
 
     gradients = torch.autograd.grad(

@@ -52,20 +52,18 @@ def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
     kspace = hermitian_reconstruct(kspace, axis=axis)
     kspaces["6_hermitian_reconstruct"] = kspace
 
+    kspace = rician_noise(kspace, base_noise=0.005)
+    kspaces["7_rician_noise"] = kspace
+
     ### === Image Domain === ###
     image = convert_to_image(kspace)
-    images["2_k_space_manipulation"] = image
-
-    image = rician_noise(image, base_noise=0.005)
-    images["3_rician_noise"] = image
-
     images["final"] = image
 
     return images, kspaces
 
 core = jax.jit(core, static_argnames=["axis"])
 
-def simluation_pipeline(nifti, axis, path, visualize=False, slice=None):
+def simluation_pipeline(nifti, axis, visualize=False, slice=None):
     ### === Image Domain === ###
     image = jnp.array(nifti.get_fdata())
     images = {"original": image}
