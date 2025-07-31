@@ -11,7 +11,7 @@ def evaluate(args):
     if method == "matter":
         matter(args.model_path, args.lmdb_path, args.flywheel_dir, args.working_dir)
     elif method == "tumor":
-        tumor(args.model_path, args.latup_path, args.lmdb_path, args.working_dir)
+        tumor(args.model_path, args.latup_path, args.lmdb_path, args.working_dir, args.brats_dir)
     elif method == "mae":
         mae(args.model_path, args.lmdb_path)
     elif method == "ssim":

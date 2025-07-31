@@ -84,9 +84,11 @@ if __name__ == "__main__":
     export_predictions_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
     # Subparser for evaluating a model using various methods
+    # py main.py evaluate --model_path "E:\ESRGAN_RRDB3_triple\generator_epoch_20.pth" --working_dir "E:\ESRGAN_RRDB3_triple\matter" --method "matter"
     evaluate_parser = subparsers.add_parser("evaluate", help="Evaluate a model using various methods")
     evaluate_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     evaluate_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
+    evaluate_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
     evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
     evaluate_parser.add_argument("--latup_path", type=str, default=LATUP_PATH, help="Path to LATUPNet model for tumor segmentation")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")

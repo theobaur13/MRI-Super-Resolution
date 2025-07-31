@@ -3,9 +3,10 @@ import shutil
 import subprocess
 from tqdm import tqdm
 import jax.numpy as jnp
+from scipy.stats import wilcoxon
 from src.utils.inference import load_model
 from src.utils.readwrite import read_nifti
-from src.eval.helpers import get_grouped_validation_slices, generate_SR_HR_nifti_dir
+from src.eval.helpers import get_grouped_validation_slices, generate_SR_HR_LR_nifti_dir
 
 def matter(model_path, lmdb_path, flywheel_dir, working_dir):
     # Set up directories
@@ -16,10 +17,15 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir):
 
     grouped_lr_paths = get_grouped_validation_slices(lmdb_path)
     model = load_model(model_path)
-    generate_SR_HR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path)
+    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path)
 
     segment_matter(flywheel_dir, input_dir, output_dir)
-    calculate_mae(output_dir, "gm")
+    dice_lr = calculate_dice(output_dir, "gm", "lr")
+    dice_sr = calculate_dice(output_dir, "gm", "sr")
+
+    # Perform Wilcoxon signed-rank test
+    stat, p_value = wilcoxon(dice_lr, dice_sr)
+    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
 
 def segment_matter(flywheel_dir, input_dir, output_dir):
     # Set up directories
@@ -69,10 +75,9 @@ def segment_matter(flywheel_dir, input_dir, output_dir):
             if file.endswith(".nii.gz"):
                 os.remove(os.path.join(flywheel_input_dir, file))
 
-# Calculate Mean Absolute Error between segmentation maps of SR and HR for each volume
-def calculate_mae(output_dir, matter_type):
-    total_mae = 0
-    count = 0
+# Calculate Dice Similarity Coefficient between segmentation maps of SR and HR for each volume
+def calculate_dice(output_dir, matter_type, comparison_type):
+    dice_scores = []
 
     if matter_type == "csf":
         pve = 0
@@ -83,22 +88,20 @@ def calculate_mae(output_dir, matter_type):
 
     # BraTS-GLI-00001-000-t2f_hr_fast_pve_0.nii.gz
     hr_files = [f for f in os.listdir(output_dir) if f.endswith(f"pve_{pve}.nii.gz") and "hr" in f]
-    sr_files = [f for f in os.listdir(output_dir) if f.endswith(f"pve_{pve}.nii.gz") and "sr" in f]
+    comparison_files = [f for f in os.listdir(output_dir) if f.endswith(f"pve_{pve}.nii.gz") and comparison_type in f]
 
-    for hr_file, sr_file in tqdm(zip(hr_files, sr_files)):
+    for hr_file, comparison_file in tqdm(zip(hr_files, comparison_files), total=len(hr_files), desc="Calculating Dice"):
         hr_path = os.path.join(output_dir, hr_file)
-        sr_path = os.path.join(output_dir, sr_file)
+        comparison_path = os.path.join(output_dir, comparison_file)
 
         hr_vol = read_nifti(hr_path)
-        sr_vol = read_nifti(sr_path)
+        comparison_vol = read_nifti(comparison_path)
 
-        # Calculate Mean Absolute Error
-        mae = jnp.mean(jnp.abs(hr_vol.get_fdata() - sr_vol.get_fdata()))
+        # Calculate Dice Similarity Coefficient
+        intersection = jnp.sum(hr_vol.get_fdata() * comparison_vol.get_fdata())
+        dice = 2 * intersection / (jnp.sum(hr_vol.get_fdata()) + jnp.sum(comparison_vol.get_fdata()))
+        dice_scores.append(dice)
 
-        total_mae += mae
-        count += 1
-
-    
-    average_mae = total_mae / count
-    print(f"Average MAE for {matter_type} segmentation: {average_mae:.4f}")
-    return average_mae
+    average_dice = jnp.mean(dice_scores)
+    print(f"Average Dice for {matter_type} segmentation ({comparison_type} vs HR): {average_dice:.4f}")
+    return dice_scores
