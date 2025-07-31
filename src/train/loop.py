@@ -19,10 +19,10 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
     gen_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     disc_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
     content_loss = CompositeLoss(weights={
-        "edge": 0.7,
+        "edge": 0.0,
         "pixel": 0.3,
         "perceptual": 1.0,
-        "fourier": 0.0,
+        "fourier": 0.0001,
         "style": 0.0
     })
     mae_loss = nn.L1Loss()
@@ -81,7 +81,7 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
                 sr = generator(lr).detach()
                 real_pred = discriminator(hr)
                 fake_pred = discriminator(sr)
-                gp = gradient_penalty(discriminator, hr, sr, device="cuda", lambda_gp=10)
+                gp = gradient_penalty(discriminator, hr, sr)
                 disc_loss = fake_pred.mean() - real_pred.mean() + gp
 
             disc_optimizer.zero_grad()

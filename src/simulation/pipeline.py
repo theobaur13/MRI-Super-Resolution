@@ -18,16 +18,6 @@ from src.simulation.transformations import (
 )
 
 def core(image: jax.Array, axis: int) -> tuple[dict, dict]:
-    """
-    Core function to apply transformations to the image.
-    
-    Args:
-        image (jax.Array): Input image in JAX array format.
-        axis (int): Axis along which to apply transformations.
-    
-    Returns:
-        dict: Dictionary containing intermediate results of the transformations.
-    """
     kspaces = {}
     images = {}
 
