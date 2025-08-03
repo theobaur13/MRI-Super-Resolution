@@ -21,9 +21,9 @@ def group_slices(slices):
         slice_keys.sort(key=lambda x: int(x.split("/")[-1]))
     return grouped
 
-def get_LMDB_validate_paths(env):
-    validate_prefix = b"validate/"
-    print("Retrieving validation LR slice paths...")
+def get_LMDB_validate_paths(env, set_type="validate"):
+    validate_prefix = f"{set_type}/".encode()
+    print(f"Retrieving {set_type} LR slice paths...")
     with env.begin() as txn:
         cursor = txn.cursor()
         validation_paths = []
@@ -33,16 +33,16 @@ def get_LMDB_validate_paths(env):
                     validation_paths.append(key.decode("utf-8"))
     return validation_paths
 
-def get_grouped_validation_slices(lmdb_path):
+def get_grouped_slices(lmdb_path, set_type="validate"):
     env = lmdb.open(lmdb_path, readonly=True, lock=False)
-    validation_paths = get_LMDB_validate_paths(env)
+    validation_paths = get_LMDB_validate_paths(env, set_type=set_type)
     lr_paths = [p for p in validation_paths if "LR" in p]
     grouped_lr_paths = group_slices(lr_paths)
     return grouped_lr_paths
 
-def generate_SR_HR(model_path, lmdb_path):
-    grouped_lr_paths = get_grouped_validation_slices(lmdb_path)
-    print(f"Found {len(grouped_lr_paths)} validation volumes.")
+def generate_SR_HR(model_path, lmdb_path, set_type="validate"):
+    grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
+    print(f"Found {len(grouped_lr_paths)} {set_type} volumes.")
 
     # Load the model
     model = load_model(model_path)
@@ -57,7 +57,7 @@ def generate_SR_HR(model_path, lmdb_path):
                     model=model,
                     lmdb_path=lmdb_path,
                     vol_name=volume,
-                    set_type="validate",
+                    set_type=set_type,
                     slice_index=slice_index,
                 )
 
@@ -67,7 +67,7 @@ def generate_SR_HR(model_path, lmdb_path):
                     torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
                 )
 
-def generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path):
+def generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type="validate"):
     for volume, slices in tqdm(grouped_lr_paths.items(), desc="Processing LR slices"):
         sr_nifti_path = os.path.join(input_dir, f"{volume}_sr.nii.gz")
         hr_nifti_path = os.path.join(input_dir, f"{volume}_hr.nii.gz")
@@ -87,7 +87,7 @@ def generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path):
                 model=model,
                 lmdb_path=lmdb_path,
                 vol_name=volume,
-                set_type="validate",
+                set_type=set_type,
                 slice_index=int(lr_slice_key.split("/")[-1]),
             )
 

@@ -10,7 +10,7 @@ from scipy.stats import wilcoxon
 from src.utils.inference import load_model
 from src.utils.readwrite import read_nifti
 from src.utils.paths import get_brats_paths
-from src.eval.helpers import get_grouped_validation_slices, generate_SR_HR_LR_nifti_dir
+from src.eval.helpers import get_grouped_slices, generate_SR_HR_LR_nifti_dir
 
 def tumor(model_path, latup_path, lmdb_path, working_dir, brats_dir):
     # Set up directories
@@ -19,14 +19,16 @@ def tumor(model_path, latup_path, lmdb_path, working_dir, brats_dir):
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    grouped_lr_paths = get_grouped_validation_slices(lmdb_path)
+    set_type = "test"
+
+    grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
     model = load_model(model_path)
-    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path)
+    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
 
     segment_tumor(latup_path, input_dir, output_dir)
 
     # Copy ground truth files to output directory
-    _, gt_paths = get_brats_paths(brats_dir, seq="t2f", dataset="BraSyn")
+    _, _, gt_paths = get_brats_paths(brats_dir, seq="t2f", dataset="BraSyn")
     for gt_path in gt_paths:
         if not os.path.exists(gt_path):
             continue

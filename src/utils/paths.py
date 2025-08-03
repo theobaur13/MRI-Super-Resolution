@@ -18,4 +18,8 @@ def get_brats_paths(data_dir, seq=None, dataset=None):
             dir_path = os.path.join(data_dir, dataset, "train")
             train_paths += [os.path.join(dir_path, patient, f"{patient}-{seq}.nii.gz") for patient in os.listdir(dir_path) for seq in sequences]
 
-    return train_paths, validate_paths
+    # Split validation paths into validate and test sets
+    validate_paths = validate_paths[:len(validate_paths) // 2]
+    test_paths = validate_paths[len(validate_paths) // 2:]
+
+    return train_paths, validate_paths, test_paths

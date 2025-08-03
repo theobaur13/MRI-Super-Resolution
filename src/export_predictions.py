@@ -10,14 +10,15 @@ def export_predictions(args):
     lmdb_path = args.lmdb_path
     model_path = args.model_path
     rrdb_count = args.rrdb_count
+    set_type = "validate"
 
     os.makedirs(output_dir, exist_ok=True)
 
     env = lmdb.open(lmdb_path, readonly=True, lock=False)
     with env.begin() as txn:
         cursor = txn.cursor()
-        prefix = b"validate/"
-        
+        prefix = f"{set_type}/".encode("utf-8")
+
         # Efficiently collect only HR slice keys for "validate" set
         validate_hr_keys = []
         if cursor.set_range(prefix):
@@ -30,7 +31,7 @@ def export_predictions(args):
         # Extract unique volume names
         vol_names = sorted({key.split("/")[1] for key in validate_hr_keys})
         if not vol_names:
-            print("No validate/HR/ keys found.")
+            print(f"No {set_type} volumes found in LMDB.")
             return
 
         # Use first volume to determine slice indices
@@ -64,7 +65,7 @@ def export_predictions(args):
                     model=model,
                     lmdb_path=lmdb_path,
                     vol_name=vol_name,
-                    set_type="validate",
+                    set_type=set_type,
                     slice_index=slice_index
                 )
 
