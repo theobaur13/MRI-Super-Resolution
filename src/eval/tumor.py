@@ -19,39 +19,19 @@ def tumor(model_path, latup_path, lmdb_path, working_dir, brats_dir, set_type):
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
-    model = load_model(model_path)
-    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
+    # grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
+    # model = load_model(model_path)
+    # generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
 
-    segment_tumor(latup_path, input_dir, output_dir)
+    # segment_tumor(latup_path, input_dir, output_dir)
 
-    # Copy ground truth files to output directory
-    _, _, gt_paths = get_brats_paths(brats_dir, seq="t2f", dataset="BraSyn")
-    for gt_path in gt_paths:
-        if not os.path.exists(gt_path):
-            continue
-        gt_file = os.path.basename(gt_path)
-        shutil.copy(gt_path, os.path.join(output_dir, gt_file))
+    for tumor_type in ["NEC", "EDE", "ENH"]:
+        dice_lr = calculate_dice(output_dir, tumor_type, "lr")
+        dice_sr = calculate_dice(output_dir, tumor_type, "sr")
 
-    dice_lr = calculate_dice(output_dir, "lr")
-    dice_sr = calculate_dice(output_dir, "sr")
-    dice_hr = calculate_dice(output_dir, "hr")
-
-    # Perform Wilcoxon signed-rank test comparing LR and SR
-    stat, p_value = wilcoxon(dice_lr["NEC"], dice_sr["NEC"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
-    stat, p_value = wilcoxon(dice_lr["EDE"], dice_sr["EDE"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
-    stat, p_value = wilcoxon(dice_lr["ENH"], dice_sr["ENH"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
-
-    # Perform Wilcoxon signed-rank test comparing SR and HR
-    stat, p_value = wilcoxon(dice_sr["NEC"], dice_hr["NEC"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
-    stat, p_value = wilcoxon(dice_sr["EDE"], dice_hr["EDE"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
-    stat, p_value = wilcoxon(dice_sr["ENH"], dice_hr["ENH"])
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
+        # Perform Wilcoxon signed-rank test comparing LR and SR
+        stat, p_value = wilcoxon(dice_lr, dice_sr)
+        print(f"Wilcoxon test statistic: {stat}, p-value: {p_value} for {tumor_type} segmentation (LR vs SR)")
 
 def segment_tumor(latup_path, input_dir, output_dir):
     model = tf.keras.models.load_model(latup_path, compile=False)
@@ -84,47 +64,32 @@ def reshape_img(img_data):
     img_data = np.repeat(reshaped_data[..., np.newaxis], 3, axis=-1)
     return img_data
 
-def calculate_dice(output_dir, comparison_type, labels=["BG", "NEC", "EDE", "ENH"]):
-    label_to_index = {"BG": 0, "NEC": 1, "EDE": 2, "ENH": 3}
+def calculate_dice(output_dir, tumor_type, comparison_type):
+    dice_scores = []
+    hr_files = sorted([f for f in os.listdir(output_dir) if "hr" in f and f.endswith(".nii.gz")])
+    comparison_files = sorted([f for f in os.listdir(output_dir) if comparison_type in f and f.endswith(".nii.gz")])
 
-    dice_scores_per_label = {label: [] for label in labels}
+    if tumor_type == "NEC":
+        label_index = 1
+    elif tumor_type == "EDE":
+        label_index = 2
+    elif tumor_type == "ENH":
+        label_index = 3
 
-    gt_files = [f for f in os.listdir(output_dir) if "gt" in f and f.endswith(".nii.gz")]
-    comparison_files = [f for f in os.listdir(output_dir) if comparison_type in f and f.endswith(".nii.gz")]
-
-    gt_files.sort()
-    comparison_files.sort()
-
-    for gt_file, comparison_file in tqdm(zip(gt_files, comparison_files), total=len(gt_files), desc="Calculating DICE"):
-        gt_path = os.path.join(output_dir, gt_file)
+    for hr_file, comparison_file in tqdm(zip(hr_files, comparison_files), total=len(hr_files), desc=f"Calculating DICE for {tumor_type}"):
+        hr_path = os.path.join(output_dir, hr_file)
         comparison_path = os.path.join(output_dir, comparison_file)
 
-        gt_vol = read_nifti(gt_path).get_fdata()  # Shape: (X, Y, Z, 4)
+        hr_vol = read_nifti(hr_path).get_fdata()  # Shape: (X, Y, Z, 4)
         comparison_vol = read_nifti(comparison_path).get_fdata()  # Shape: (X, Y, Z, 4)
 
-        for label in labels:
-            idx = label_to_index[label]
+        hr_label = hr_vol[..., label_index]
+        comparison_label = comparison_vol[..., label_index]
 
-            gt_label = gt_vol[..., idx]
-            comparison_label = comparison_vol[..., idx]
+        intersection = jnp.sum(hr_label * comparison_label)
+        dice = 2 * intersection / (jnp.sum(hr_label) + jnp.sum(comparison_label))
+        dice_scores.append(dice)
 
-            dice = calculate_dice_coefficient(gt_label, comparison_label)
-            dice_scores_per_label[label].append(dice)
-
-    avg_dice = {}
-    for label in labels:
-        scores = dice_scores_per_label[label]
-        if scores:
-            avg_dice[label] = np.mean(scores)
-            print(f"Average DICE for {label}: {avg_dice[label]:.4f}")
-
-    return dice_scores_per_label
-
-def calculate_dice_coefficient(vol1, vol2, eps=1e-7):
-    """Calculate Dice coefficient between two binary volumes."""
-    vol1 = jnp.asarray(vol1)
-    vol2 = jnp.asarray(vol2)
-    intersection = jnp.sum(vol1 * vol2)
-    union = jnp.sum(vol1) + jnp.sum(vol2)
-    dice = (2.0 * intersection + eps) / (union + eps)
-    return float(dice)
+    average_dice = jnp.mean(jnp.array(dice_scores))
+    print(f"Average Dice for {tumor_type} segmentation ({comparison_type} vs HR): {average_dice:.4f}")
+    return dice_scores
