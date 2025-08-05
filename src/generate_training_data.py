@@ -19,9 +19,10 @@ def generate_training_data(args):
     batch_size = 8
     useful_range = (1, 150)
     map_size = int(60 * 1024 * 1024 * 1024)
+    # map_size = int(20 * 1024 * 1024 * 1024)  # 20 GB
 
     env = lmdb.open(output_dir, map_size=map_size)
-    train_paths, validate_paths = get_brats_paths(brats_dir, seq, dataset="BraSyn")
+    train_paths, validate_paths, test_paths = get_brats_paths(brats_dir, seq, dataset="BraSyn")
 
     def process_split(split_name, paths, limit):
         print(f"Simulating {limit} {split_name} scans")
@@ -60,13 +61,15 @@ def generate_training_data(args):
     if not limit:
         train_limit = len(train_paths)
         validate_limit = len(validate_paths)
+        test_limit = len(test_paths)
     else:
         train_limit = min(limit, len(train_paths))
         ratio = len(validate_paths) / len(train_paths)
         validate_limit = int(train_limit * ratio)
 
     process_split("train", train_paths, train_limit)
-    process_split("validate", validate_paths, validate_limit)
+    process_split("validate", test_paths, test_limit)
+    process_split("test", validate_paths, validate_limit)
 
     env.sync()
     env.close()

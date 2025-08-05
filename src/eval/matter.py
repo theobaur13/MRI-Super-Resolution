@@ -8,26 +8,25 @@ from src.utils.inference import load_model
 from src.utils.readwrite import read_nifti
 from src.eval.helpers import get_grouped_slices, generate_SR_HR_LR_nifti_dir
 
-def matter(model_path, lmdb_path, flywheel_dir, working_dir):
+def matter(model_path, lmdb_path, flywheel_dir, working_dir, set_type):
     # Set up directories
     input_dir = os.path.join(working_dir, "input")
     output_dir = os.path.join(working_dir, "output_matter")
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    set_type = "test"
+    # grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
+    # model = load_model(model_path)
+    # generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
 
-    grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
-    model = load_model(model_path)
-    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
+    # segment_matter(flywheel_dir, input_dir, output_dir)
+    for matter_type in ["csf", "wm", "gm"]:
+        dice_lr = calculate_dice(output_dir, matter_type, "lr")
+        dice_sr = calculate_dice(output_dir, matter_type, "sr")
 
-    segment_matter(flywheel_dir, input_dir, output_dir)
-    dice_lr = calculate_dice(output_dir, "gm", "lr")
-    dice_sr = calculate_dice(output_dir, "gm", "sr")
-
-    # Perform Wilcoxon signed-rank test
-    stat, p_value = wilcoxon(dice_lr, dice_sr)
-    print(f"Wilcoxon test statistic: {stat}, p-value: {p_value}")
+        # Perform Wilcoxon signed-rank test
+        stat, p_value = wilcoxon(dice_lr, dice_sr)
+        print(f"Wilcoxon test statistic: {stat}, p-value: {p_value} for {matter_type} segmentation")
 
 def segment_matter(flywheel_dir, input_dir, output_dir):
     # Set up directories
@@ -40,7 +39,7 @@ def segment_matter(flywheel_dir, input_dir, output_dir):
         if not nifti.endswith(".nii.gz"):
             continue
 
-        # Check if the file already exists in the flywheel output directory
+        # Check if the file already exists in the output directory
         output_files = set(os.listdir(output_dir))
         prefix = nifti.split(".")[0]
 
@@ -104,6 +103,6 @@ def calculate_dice(output_dir, matter_type, comparison_type):
         dice = 2 * intersection / (jnp.sum(hr_vol.get_fdata()) + jnp.sum(comparison_vol.get_fdata()))
         dice_scores.append(dice)
 
-    average_dice = jnp.mean(dice_scores)
+    average_dice = jnp.mean(jnp.array(dice_scores))
     print(f"Average Dice for {matter_type} segmentation ({comparison_type} vs HR): {average_dice:.4f}")
     return dice_scores

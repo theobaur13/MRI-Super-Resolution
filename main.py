@@ -92,6 +92,7 @@ if __name__ == "__main__":
     evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
     evaluate_parser.add_argument("--latup_path", type=str, default=LATUP_PATH, help="Path to LATUPNet model for tumor segmentation")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")
+    evaluate_parser.add_argument("--set_type", type=str, choices=["train", "validate", "test"], default="test", help="Dataset set type for evaluation")
     evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips", "tumor"], required=True, help="Evaluation method to use")
 
     args = parser.parse_args()

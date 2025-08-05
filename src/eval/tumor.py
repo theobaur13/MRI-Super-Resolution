@@ -12,14 +12,12 @@ from src.utils.readwrite import read_nifti
 from src.utils.paths import get_brats_paths
 from src.eval.helpers import get_grouped_slices, generate_SR_HR_LR_nifti_dir
 
-def tumor(model_path, latup_path, lmdb_path, working_dir, brats_dir):
+def tumor(model_path, latup_path, lmdb_path, working_dir, brats_dir, set_type):
     # Set up directories
     input_dir = os.path.join(working_dir, "input")
     output_dir = os.path.join(working_dir, "output_tumor")
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
-
-    set_type = "test"
 
     grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
     model = load_model(model_path)

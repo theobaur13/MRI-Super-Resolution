@@ -9,14 +9,14 @@ def evaluate(args):
     method = args.method.lower()
 
     if method == "matter":
-        matter(args.model_path, args.lmdb_path, args.flywheel_dir, args.working_dir)
+        matter(args.model_path, args.lmdb_path, args.flywheel_dir, args.working_dir, args.set_type)
     elif method == "tumor":
-        tumor(args.model_path, args.latup_path, args.lmdb_path, args.working_dir, args.brats_dir)
+        tumor(args.model_path, args.latup_path, args.lmdb_path, args.working_dir, args.brats_dir, args.set_type)
     elif method == "mae":
-        mae(args.model_path, args.lmdb_path)
+        mae(args.model_path, args.lmdb_path, args.set_type)
     elif method == "ssim":
-        ssim(args.model_path, args.lmdb_path)
+        ssim(args.model_path, args.lmdb_path, args.set_type)
     elif method == "psnr":
-        psnr(args.model_path, args.lmdb_path)
+        psnr(args.model_path, args.lmdb_path, args.set_type)
     elif method == "lpips":
-        LPIPS(args.model_path, args.lmdb_path)
+        LPIPS(args.model_path, args.lmdb_path, args.set_type)
