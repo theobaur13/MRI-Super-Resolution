@@ -23,4 +23,3 @@ def get_brats_paths(data_dir, seq=None, dataset=None):
     test_paths = validate_paths[len(validate_paths) // 2:]
 
     return train_paths, new_validate_paths, test_paths
-    # return [], new_validate_paths, test_paths

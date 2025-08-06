@@ -1,7 +1,6 @@
 import os
 import torch
 from src.train.loop import GAN_loop, CNN_loop
-
 from torch.utils.data import DataLoader
 from src.train.dataset import LMDBDataset
 
@@ -15,10 +14,12 @@ def train(args):
     # Constants
     BATCH_SIZE = 4
     EPOCHS = 20
+    # EPOCHS = 5
     PRETRAIN_EPOCHS = 3
     NUM_WORKERS = 4
     USEFUL_RANGE = (10, 145)
     LIMIT = 168885
+    # LIMIT = 10000
     RRDB_COUNT = 3
 
     train_data = LMDBDataset(lmdb_path=args.lmdb_path,split="train", limit=LIMIT, useful_range=USEFUL_RANGE)

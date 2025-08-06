@@ -25,6 +25,13 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
         "fourier": 0.0001,
         "style": 0.0
     })
+    # content_loss = CompositeLoss(weights={
+    #     "pixel": 0.0,
+    #     "perceptual": 1.0,
+    #     "edge": 0.0,
+    #     "fourier": 0.0,
+    #     "style": 0.0
+    # })
     mae_loss = nn.L1Loss()
     scaler = torch.amp.GradScaler()
 

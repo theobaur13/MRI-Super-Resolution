@@ -15,11 +15,11 @@ def matter(model_path, lmdb_path, flywheel_dir, working_dir, set_type):
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    # grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
-    # model = load_model(model_path)
-    # generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
+    grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
+    model = load_model(model_path)
+    generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type=set_type)
 
-    # segment_matter(flywheel_dir, input_dir, output_dir)
+    segment_matter(flywheel_dir, input_dir, output_dir)
     for matter_type in ["csf", "wm", "gm"]:
         dice_lr = calculate_dice(output_dir, matter_type, "lr")
         dice_sr = calculate_dice(output_dir, matter_type, "sr")

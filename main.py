@@ -61,7 +61,7 @@ if __name__ == "__main__":
     predict_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     predict_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     predict_parser.add_argument("--vol_name", type=str, help="Volume name in LMDB dataset (e.g., BraTS-GLI-00000-000-t2f)")
-    predict_parser.add_argument("--set", type=str, choices=["train", "validate"], default="train", help="Dataset set to run the model on")
+    predict_parser.add_argument("--set", type=str, choices=["train", "validate", "test"], default="train", help="Dataset set to run the model on")
     predict_parser.add_argument("--slice", type=int, default=24, help="Slice index for running the model")
     predict_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
 
