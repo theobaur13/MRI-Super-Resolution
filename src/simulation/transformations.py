@@ -160,3 +160,20 @@ def hermitian_reconstruct(kspace, axis):
     # Fill in missing values with Hermitian conjugates
     reconstructed = jnp.where(keep_mask, kspace, kspace_conj)
     return reconstructed
+
+def square_filter(kspace, size=32):
+    shape = kspace.shape
+    center = [s // 2 for s in shape]
+
+    # Calculate start and end indices for the cube along each axis
+    starts = [c - size // 2 for c in center]
+    ends = [start + size for start in starts]
+
+    # Create a mask initialized to zeros
+    mask = jnp.zeros(shape, dtype=kspace.dtype)
+
+    # Set the centered cube to 1
+    mask = mask.at[starts[0]:ends[0], starts[1]:ends[1], starts[2]:ends[2]].set(1)
+
+    # Apply mask
+    return kspace * mask
