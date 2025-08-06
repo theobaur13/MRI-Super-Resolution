@@ -4,6 +4,7 @@ from src.eval.ssim import ssim
 from src.eval.psnr import psnr
 from src.eval.lpips import LPIPS
 from src.eval.tumor import tumor
+from src.eval.metrics import metrics
 
 def evaluate(args):
     method = args.method.lower()
@@ -12,6 +13,8 @@ def evaluate(args):
         matter(args.model_path, args.lmdb_path, args.flywheel_dir, args.working_dir, args.set_type)
     elif method == "tumor":
         tumor(args.model_path, args.latup_path, args.lmdb_path, args.working_dir, args.brats_dir, args.set_type)
+    elif method == "metrics":
+        metrics(args.model_path, args.lmdb_path, args.set_type)
     elif method == "mae":
         mae(args.model_path, args.lmdb_path, args.set_type)
     elif method == "ssim":
