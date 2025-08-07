@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
 import pandas as pd
+from matplotlib.colors import ListedColormap
 from src.utils.conversions import jax_to_numpy
 from src.utils.slicing import slice_nifti
 
@@ -23,7 +24,13 @@ def extract_slice(data, slice=65, axis=0):
 # Generic slice plotter for volume or NIfTI.
 def plot_slice(ax, data, slice=65, axis=0, cmap='gray'):
     slice_data = extract_slice(data, slice=slice, axis=axis)
-    ax.imshow(jnp.abs(slice_data), cmap=cmap)
+    if slice_data.ndim == 3 and slice_data.shape[-1] == 4:
+        labels = np.argmax(slice_data, axis=-1)
+
+        categorical_cmap = ListedColormap(['black', 'blue', 'green', 'red'])
+        ax.imshow(labels, cmap=categorical_cmap, interpolation='nearest')
+    else:
+        ax.imshow(jnp.abs(slice_data), cmap=cmap)
 
 # Display a comparison of NIfTI or raw volumes."""
 def display_img(data_list, slice=24, axis=0, titles=None):
@@ -89,15 +96,16 @@ def plot_training_log(csv_file, output_file):
     for col in metric_cols:
         plt.plot(df["step"], df[col], label=col)
 
-    plt.xlabel("Step (epoch + batch)")
+    plt.xlabel("Step")
     plt.ylabel("Metric Value")
     plt.title("Training Metrics Over Time")
 
     # Add vertical red lines for epoch boundaries
-    epoch_starts = df.groupby("epoch")["step"].min().tolist()
-    for step in epoch_starts[1:]:  # skip first epoch at step 0
-        plt.axvline(x=step, color="red", linestyle="--", linewidth=1)
+    # epoch_starts = df.groupby("epoch")["step"].min().tolist()
+    # for step in epoch_starts[1:]:  # skip first epoch at step 0
+    #     plt.axvline(x=step, color="red", linestyle="--", linewidth=1)
 
+    # plt.ylim(-15, 15)
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_file)
@@ -105,8 +113,8 @@ def plot_training_log(csv_file, output_file):
 
 def plot_lr_sr_hr(lr, sr, hr):
     # Plotting the slices
-    vmin = min(lr.min(), sr.min(), hr.min())
-    vmax = max(lr.max(), sr.max(), hr.max())
+    vmin = 0
+    vmax = 1
     
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     axes[0].imshow(lr, cmap='gray', vmin=vmin, vmax=vmax)
