@@ -40,7 +40,7 @@ def get_grouped_slices(lmdb_path, set_type="validate"):
     grouped_lr_paths = group_slices(lr_paths)
     return grouped_lr_paths
 
-def generate_SR_HR(model_path, lmdb_path, set_type="validate"):
+def generate_SR_HR(model_path, lmdb_path, set_type="validate", return_index=False):
     grouped_lr_paths = get_grouped_slices(lmdb_path, set_type=set_type)
     print(f"Found {len(grouped_lr_paths)} {set_type} volumes.")
 
@@ -61,11 +61,17 @@ def generate_SR_HR(model_path, lmdb_path, set_type="validate"):
                     slice_index=slice_index,
                 )
 
-                # Yield as PyTorch tensors
-                yield (
-                    torch.tensor(sr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
-                    torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-                )
+                if return_index:
+                    yield (
+                        torch.tensor(sr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
+                        torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
+                        slice_index
+                    )
+                else:
+                    yield (
+                        torch.tensor(sr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0),
+                        torch.tensor(hr_slice, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+                    )
 
 def generate_SR_HR_LR_nifti_dir(model, grouped_lr_paths, input_dir, lmdb_path, set_type="validate"):
     for volume, slices in tqdm(grouped_lr_paths.items(), desc="Processing LR slices"):

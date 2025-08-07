@@ -5,6 +5,7 @@ from src.eval.psnr import psnr
 from src.eval.lpips import LPIPS
 from src.eval.tumor import tumor
 from src.eval.metrics import metrics
+from src.eval.slice_eval import slice_eval
 
 def evaluate(args):
     method = args.method.lower()
@@ -23,3 +24,5 @@ def evaluate(args):
         psnr(args.model_path, args.lmdb_path, args.set_type)
     elif method == "lpips":
         LPIPS(args.model_path, args.lmdb_path, args.set_type)
+    elif method == "slice":
+        slice_eval(args.model_path, args.lmdb_path, args.set_type)

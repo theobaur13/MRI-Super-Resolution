@@ -82,6 +82,7 @@ if __name__ == "__main__":
     export_predictions_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
     export_predictions_parser.add_argument("--output_dir", type=str, required=True, help="Output directory for predictions")
     export_predictions_parser.add_argument("--rrdb_count", type=int, default=3, help="Number of RRDB blocks in the generator")
+    export_predictions_parser.add_argument("--set_type", type=str, choices=["train", "validate", "test"], default="test", help="Dataset set type for exporting predictions")
 
     # Subparser for evaluating a model using various methods
     # py main.py evaluate --model_path "E:\ESRGAN_RRDB3_triple\generator_epoch_20.pth" --working_dir "E:\ESRGAN_RRDB3_triple\matter" --method "matter"
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     evaluate_parser.add_argument("--latup_path", type=str, default=LATUP_PATH, help="Path to LATUPNet model for tumor segmentation")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")
     evaluate_parser.add_argument("--set_type", type=str, choices=["train", "validate", "test"], default="test", help="Dataset set type for evaluation")
-    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips", "tumor"], required=True, help="Evaluation method to use")
+    evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips", "tumor", "metrics", "slice"], required=True, help="Evaluation method to use")
 
     args = parser.parse_args()
     action = args.action.lower()

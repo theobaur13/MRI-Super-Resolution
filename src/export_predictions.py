@@ -10,7 +10,7 @@ def export_predictions(args):
     lmdb_path = args.lmdb_path
     model_path = args.model_path
     rrdb_count = args.rrdb_count
-    set_type = "validate"
+    set_type = args.set_type
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -47,9 +47,10 @@ def export_predictions(args):
     # Load the model
     model = load_model(model_path, rrdb_count=rrdb_count)
 
+    count = 0
     for vol_name in tqdm(vol_names, desc="Volumes"):
-        # Temporarily limit to a specific volume for testing
-        if vol_name == "BraTS-GLI-00082-000-t2f":
+        # Temporarily limit
+        if count >= 5:
             break
 
         vol_output_dir = os.path.join(output_dir, vol_name)
@@ -76,3 +77,5 @@ def export_predictions(args):
 
             except Exception as e:
                 print(f"[ERROR] Volume: {vol_name}, Slice: {slice_index:03d} -> {e}")
+
+        count += 1
