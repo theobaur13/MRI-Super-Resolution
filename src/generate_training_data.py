@@ -16,6 +16,7 @@ def generate_training_data(args):
     limit = args.limit
     axis = args.axis
     seq = args.seq
+    normalise = args.normalise
     batch_size = 8
     useful_range = (1, 150)
     map_size = int(60 * 1024 * 1024 * 1024)
@@ -33,7 +34,7 @@ def generate_training_data(args):
                 vol_id = os.path.basename(path).replace(".nii.gz", "")
                 if volume_already_processed(env, vol_id, split=split_name):
                     continue
-                images.append(read_nifti(path).get_fdata())
+                images.append(read_nifti(path, normalise).get_fdata())
                 ids.append(vol_id)
 
             if not images:

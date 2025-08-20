@@ -16,7 +16,7 @@ if __name__ == "__main__":
     LMDB_PATH = os.getenv("LMDB_PATH")
     BRATS_DIR= os.getenv("BRATS_DIR")
     FLYWHEEL_DIR = os.getenv("FLYWHEEL_DIR")
-    LATUP_PATH = os.getenv("LATUP_PATH")
+    DEEPSEG_PATH = os.getenv("DEEPSEG_PATH")
 
     # Set up directories
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     generate_training_data_parser.add_argument("--axis", type=int, default=2, help="Axis for simulation")
     generate_training_data_parser.add_argument("--limit", type=int, help="Limit the number of files to simulate")
     generate_training_data_parser.add_argument("--seq", type=str, required=False, help="Sequence type (e.g., 't1c', 't1n', 't2f', 't2w')")
+    generate_training_data_parser.add_argument("--normalise", type=bool, default=True, help="Whether to normalise the images")
 
     # Subparser for viewing data
     # > py main.py view --path "E:\data-brats-2024\BraSyn\train\BraTS-GLI-00000-000\BraTS-GLI-00000-000-t2f.nii.gz" --slice 65 --axis 2
@@ -89,9 +90,8 @@ if __name__ == "__main__":
     evaluate_parser = subparsers.add_parser("evaluate", help="Evaluate a model using various methods")
     evaluate_parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model")
     evaluate_parser.add_argument("--lmdb_path", type=str, default=LMDB_PATH, help="Path to LMDB dataset")
-    evaluate_parser.add_argument("--brats_dir", type=str, default=BRATS_DIR, help="Path to BraTS dataset directory")
     evaluate_parser.add_argument("--flywheel_dir", type=str, default=FLYWHEEL_DIR, help="Directory for Flywheel output")
-    evaluate_parser.add_argument("--latup_path", type=str, default=LATUP_PATH, help="Path to LATUPNet model for tumor segmentation")
+    evaluate_parser.add_argument("--deepseg_path", type=str, default=DEEPSEG_PATH, help="Path to DeepSeg model for tumor segmentation")
     evaluate_parser.add_argument("--working_dir", type=str, help="Output directory for segmentation results")
     evaluate_parser.add_argument("--set_type", type=str, choices=["train", "validate", "test"], default="test", help="Dataset set type for evaluation")
     evaluate_parser.add_argument("--method", type=str, choices=["matter", "mae", "ssim", "psnr", "lpips", "tumor", "metrics", "slice"], required=True, help="Evaluation method to use")
