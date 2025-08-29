@@ -12,3 +12,4 @@ flywheel/v0/output/*
 !flywheel/v0/output/.gitkeep
 run.ps1
 .env
+/models/

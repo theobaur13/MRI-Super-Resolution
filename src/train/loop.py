@@ -25,13 +25,6 @@ def GAN_loop(train_loader, val_loader, epochs, pretrain_epochs, rrdb_count, outp
         "fourier": 0.0001,
         "style": 0.0
     })
-    # content_loss = CompositeLoss(weights={
-    #     "pixel": 0.0,
-    #     "perceptual": 1.0,
-    #     "edge": 0.0,
-    #     "fourier": 0.0,
-    #     "style": 0.0
-    # })
     mae_loss = nn.L1Loss()
     scaler = torch.amp.GradScaler()
 
@@ -210,9 +203,9 @@ def CNN_loop(train_loader, val_loader, epochs, output_dir, resume=False):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion = CompositeLoss(
         weights={
-            "pixel": 0.0,
+            "pixel": 0.3,
             "perceptual": 1.0,
-            "edge": 0.0,
+            "edge": 0.7,
             "fourier": 0.0,
             "style": 0.0
         }
